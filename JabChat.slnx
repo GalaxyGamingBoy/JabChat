@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="Cli/Cli.csproj" />
+  <Project Path="XMPP.Core.Tests/XMPP.Core.Tests.csproj" />
+  <Project Path="XMPP.Core/XMPP.Core.csproj" />
+  <Project Path="XMPP.Tests/XMPP.Tests.csproj" />
+  <Project Path="XMPP.XEP.0030/XMPP.XEP.0030.csproj" />
+</Solution>
