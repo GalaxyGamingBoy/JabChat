@@ -6,6 +6,9 @@ var root = new RootCommand("Command Line Utility to interact with XMPP");
 var addressCommand = new AddressCommand();
 root.Subcommands.Add(addressCommand);
 
+var clientCommand = new ClientCommand();
+root.Subcommands.Add(clientCommand);
+
 var result = root.Parse(args);
 foreach (var parseError in result.Errors)
   Console.Error.WriteLine(parseError.Message);
