@@ -178,12 +178,12 @@ public class XmppClient2 : IXmppClient
     return Result.Ok();
   }
 
-  public Task DisconnectAsync()
+  public Task<Result> DisconnectAsync()
   {
-    return Task.CompletedTask;
+    return (Task<Result>)Task.CompletedTask;
   }
 
-  public Task ReconnectAsync()
+  public Task<Result> ReconnectAsync()
   {
     throw new NotImplementedException();
   }

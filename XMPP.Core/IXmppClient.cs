@@ -6,8 +6,6 @@ namespace XMPP.Core;
 
 public interface IXmppClient
 {
-  public Task ConnectAsync(XmppAddress address);
-
   // new api
   
   /// <summary>
@@ -18,12 +16,12 @@ public interface IXmppClient
   /// <summary>
   /// Disconnects from the XMPP Server
   /// </summary>
-  public Task DisconnectAsync();
+  public Task<Result> DisconnectAsync();
   
   /// <summary>
   /// Reconnects asynchronously to the XMPP Server
   /// </summary>
-  public Task ReconnectAsync();
+  public Task<Result> ReconnectAsync();
 
   /// <summary>
   /// Registers a XMPP stream feature for deserialization

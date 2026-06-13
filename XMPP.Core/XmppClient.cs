@@ -59,17 +59,17 @@ public class XmppClient(XmppCreds creds) : IXmppClient, IAsyncDisposable
     _backgroundService = Task.Run(BackgroundService);
   }
 
-  public Task ConnectAsync()
+  public Task<Result> ConnectAsync()
   {
     throw new NotImplementedException();
   }
 
-  public Task DisconnectAsync()
+  public Task<Result> DisconnectAsync()
   {
     throw new NotImplementedException();
   }
 
-  public Task ReconnectAsync()
+  public Task<Result> ReconnectAsync()
   {
     throw new NotImplementedException();
   }
