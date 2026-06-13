@@ -1,25 +1,40 @@
 using System.Net.Sockets;
 using System.Text;
 using System.Xml;
-using System.Xml.Serialization;
 using FluentResults;
 using XMPP.Core.Address;
 using XMPP.Core.Backend;
-using XMPP.Core.Features;
 
 namespace XMPP.Core;
 
-public class XmppClient3 : IXmppClient, IDisposable
+public class XmppClient3 : IXmppClient, IAsyncDisposable
 {
+  /// <summary>
+  /// XMPP Client State
+  /// </summary>
   public enum State
   {
+    /// <summary>
+    /// There is no active socket connection to an XMPP host
+    /// </summary>
     Disconnected,
-    Negotiating
+    /// <summary>
+    /// There is an active socket connection to an XMPP host, but stream negotiation hasn't started yet
+    /// </summary>
+    SocketConnected,
+    /// <summary>
+    /// There is an active XMPP stream negotiation
+    /// </summary>
+    Negotiating,
+    /// <summary>
+    /// The XMPP stream has been established, no actions pending
+    /// </summary>
+    Connected,
   }
 
-  public required string Host { get; init; }
+  public required XmppAddress Address { get; init; }
   public required XmppCreds Credentials { get; init; }
-  public required IXmppClientBackend Backend { get; init; }
+  public IXmppClientBackend Backend { get; init; }
   
   public State XmppState { get; private set; } = State.Disconnected;
   
@@ -34,14 +49,33 @@ public class XmppClient3 : IXmppClient, IDisposable
     "There MUST NOT be an active XMPP connection.");
   private Result ValidateConnectionActiveState() => Result.FailIf(XmppState == State.Disconnected,
     "There MUST be an active XMPP connection.");
+  private Result ValidateStreamActiveState() =>
+    Result.FailIf(XmppState is State.Disconnected or State.SocketConnected, 
+      "There MUST be an active XMPP stream. ");
 
-  public XmppClient3()
+  public XmppClient3(IXmppClientBackend backend)
   {
+    Backend = backend;
     BackgroundServiceHandler = Task.Run(BackgroundService);
+    Backend.NetworkStreamUpdated += OnUpdatedNetworkStream;
+  }
+
+  public async ValueTask DisposeAsync()
+  {
+    await DisconnectAsync();
+    
+    await _cts.CancelAsync();
+    await BackgroundServiceHandler;
+    
+    Backend.Dispose();
+    
+    // Reader, Writer, Stream disposal in Backend & OnUpdatedNetworkStream
   }
 
   public void Dispose()
   {
+    DisconnectAsync().Wait();
+    
     _cts.Cancel();
     BackgroundServiceHandler.Wait();
     
@@ -51,42 +85,65 @@ public class XmppClient3 : IXmppClient, IDisposable
     _writer?.Dispose();
   }
 
-  private void UpdateStreams(NetworkStream? stream)
+  private void OnUpdatedNetworkStream(object? sender, NetworkStreamUpdatedEventArgs args)
   {
+    var stream = args.Stream;
+    
     if (stream is null)
     {
+      _reader?.Dispose();
+      _writer?.Dispose();
+      
       _stream =  null;
       _reader = null;
       _writer = null;
       
       return;
     }
-
+    
     _stream = stream;
     
     _reader = XmlReader.Create(_stream, new XmlReaderSettings
     {
-      Async = true, ConformanceLevel = ConformanceLevel.Fragment, CloseInput = false
+      Async = true, IgnoreProcessingInstructions =  true, IgnoreWhitespace = true,  IgnoreComments = true
     });
     
     _writer = XmlWriter.Create(_stream, new XmlWriterSettings
     {
-      Async = true, ConformanceLevel = ConformanceLevel.Fragment, CloseOutput = false, OmitXmlDeclaration = true, Encoding = Encoding.UTF8
-    });
+      Async = true, CloseOutput = false, OmitXmlDeclaration = true
+    });   
   }
 
-  private async Task OpenXmppStream() {}
-  private async Task CloseXmppStream() {}
+  private async Task<Result> OpenXmppStream()
+  {
+    if (ValidateConnectionActiveState() is { IsFailed: true } r)
+      return r;
+    
+    await _stream!.WriteAsync(Encoding.UTF8.GetBytes("<?xml version='1.0'?>"));
+    await _stream.WriteAsync(Encoding.UTF8.GetBytes(
+      $"<stream:stream from='{Credentials.Jid}' to='{Address.Host.TrimEnd(".")}' version='1.0' xml:lang='en' xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams'>\n"));
+    await _stream.FlushAsync();
+
+    XmppState = State.Negotiating;
+    return Result.Ok();
+  }
+
+  private async Task CloseXmppStream()
+  {
+    throw new NotImplementedException();
+  }
 
   public async Task<Result> ConnectAsync()
   {
     if (ValidateDisconnectedState() is { IsFailed: true } r)
       return r;
     
-    await Backend.ConnectAsync(Host);
-    UpdateStreams(Backend.Stream);
+    await Backend.ConnectAsync(Address);
+    XmppState = State.SocketConnected;
     
-    XmppState = State.Negotiating;
+    if (await OpenXmppStream() is { IsFailed: true } resultConnect)
+      return resultConnect;
+    
     return Result.Ok();
   }
 
@@ -96,7 +153,6 @@ public class XmppClient3 : IXmppClient, IDisposable
       return r;
 
     Backend.Disconnect();
-    UpdateStreams(Backend.Stream);
 
     XmppState = State.Disconnected;
     return Result.Ok();
@@ -125,20 +181,28 @@ public class XmppClient3 : IXmppClient, IDisposable
   {
     while (!_cts.IsCancellationRequested)
     {
-      if (_reader is null)
+      if (ValidateStreamActiveState()  is { IsFailed: true })
       {
         await Task.Delay(100, _cts.Token);
         continue;
       }
-
-      await _reader.ReadAsync();
+      
+      await _reader!.ReadAsync();
       
       if (_reader.NodeType != XmlNodeType.Element)
         continue; 
+     
+      Console.WriteLine($"{_reader.Name}: {_reader.NamespaceURI}");
       
-      var serializer = new XmlSerializer(typeof(StartTlsFeature));
-      var s = serializer.Deserialize(_reader);
-      Console.WriteLine(s);
+      if (_reader.Name == "stream:stream")
+        continue; // todo: store stream from server
+
+      if (_reader.Name == "stream:features")
+      {
+        
+      }
+      
+      // todo: proc
     }
   }
 }

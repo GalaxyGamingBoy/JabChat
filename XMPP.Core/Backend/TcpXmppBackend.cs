@@ -10,7 +10,14 @@ public class TcpXmppBackend : IXmppClientBackend
   
   private TcpClient? Client { get; set; } = null;
   public NetworkStream? Stream { get; private set; } = null;
-  
+
+  public void RefreshNetworkStream()
+  {
+    NetworkStreamUpdated?.Invoke(this, new NetworkStreamUpdatedEventArgs { Stream = Stream });
+  }
+
+  public event EventHandler<NetworkStreamUpdatedEventArgs>? NetworkStreamUpdated;
+
   public void Dispose()
   {
     Stream?.Dispose();
@@ -36,6 +43,8 @@ public class TcpXmppBackend : IXmppClientBackend
     Stream = Client.GetStream();
     Client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
     
+    NetworkStreamUpdated?.Invoke(this, new NetworkStreamUpdatedEventArgs { Stream = Stream });
+    
     return Result.Ok();
   }
 
@@ -46,5 +55,7 @@ public class TcpXmppBackend : IXmppClientBackend
     
     Stream = null;
     Client = null;
+    
+    NetworkStreamUpdated?.Invoke(this, new  NetworkStreamUpdatedEventArgs { Stream = null });
   }
 }
