@@ -23,10 +23,15 @@ public class TcpXmppBackend : IXmppClientBackend
     if (addr is null)
       return Result.Fail("No XMPP address found for Host");
     
+    return await ConnectAsync(addr); 
+  }
+
+  public async Task<Result> ConnectAsync(XmppAddress address)
+  {
     Stream = null;
     Client = new TcpClient();
     
-    await Client.ConnectAsync(addr.Ip, addr.Port);
+    await Client.ConnectAsync(address.Ip, address.Port);
     
     Stream = Client.GetStream();
     Client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
