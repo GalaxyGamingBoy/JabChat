@@ -1,8 +1,8 @@
 <Solution>
+  <Project Path="App/App.csproj" />
   <Project Path="App.Android/App.Android.csproj" />
   <Project Path="App.Browser/App.Browser.csproj" />
   <Project Path="App.Desktop/App.Desktop.csproj" />
-  <Project Path="App/App.csproj" />
   
   <Project Path="Cli/Cli.csproj" />
   

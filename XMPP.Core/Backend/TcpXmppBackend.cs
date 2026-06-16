@@ -1,3 +1,4 @@
+using System.Net.Security;
 using System.Net.Sockets;
 using FluentResults;
 using XMPP.Core.Address;
@@ -9,17 +10,54 @@ public class TcpXmppBackend : IXmppClientBackend
   private IXmppAddressProvider Provider { get; } = new XmppAddressProvider();
   
   private TcpClient? Client { get; set; } = null;
-  public NetworkStream? Stream { get; private set; } = null;
+  private NetworkStream? Stream { get; set; } = null;
+  private SslStream? SslStream { get; set; } = null;
+  private XmppAddress? Address { get; set; } = null;
 
-  public void RefreshNetworkStream()
+  private async Task UpgradeSslStream(IXmppClient xmppClient)
   {
-    NetworkStreamUpdated?.Invoke(this, new NetworkStreamUpdatedEventArgs { Stream = Stream });
+    if (Client is null || Stream is null)
+    {
+      Console.WriteLine("Upgrade to SSL failed - no active TCP Stream");
+      return;
+    }
+
+    NetworkStreamUpdated?.Invoke(this, new NetworkStreamUpdatedEventArgs() {Stream = null});
+    await xmppClient.StopBackgroundService();
+    
+    SslStream = new SslStream(Stream, false);
+    await SslStream.AuthenticateAsClientAsync(new SslClientAuthenticationOptions()
+    {
+      AllowRenegotiation = false,
+      TargetHost =  Address!.Host.TrimEnd(".").ToString()
+    });
+    
+    NetworkStreamUpdated?.Invoke(this, new NetworkStreamUpdatedEventArgs() {Stream = SslStream});
+    xmppClient.StartBackgroundService();
+    xmppClient.ReadLock.Release();
   }
 
-  public void OnStreamFeatureRequested(object? sender, StreamFeatureRequestedEventArgs eventArgs)
+  public Task OnStreamFeatureRequested(object? sender, StreamFeatureRequestedEventArgs eventArgs)
   {
     if (eventArgs.Feature is Features.StartTlsFeature)
+    {
       Console.WriteLine("Attempting to upgrade session to TLS");
+      ((IXmppClient)sender!).SendStanza(new StartTls.Command());
+    }
+    
+    return Task.CompletedTask;
+  }
+
+  public async Task OnUnexpectedStanzaReceived(object? sender, UnexpectedStanzaReceivedEventArgs eventArgs)
+  {
+    if (eventArgs.Element is StartTls.Proceed)
+    {
+      Console.WriteLine("Server confirmed TLS upgrade, proceeding...");
+      await UpgradeSslStream((IXmppClient) sender!);
+      
+      await ((XmppClient3)sender!).OpenXmppStream();
+      Console.WriteLine("TLS upgrade complete");
+    }
   }
 
   public event EventHandler<NetworkStreamUpdatedEventArgs>? NetworkStreamUpdated;
@@ -43,6 +81,7 @@ public class TcpXmppBackend : IXmppClientBackend
   {
     Stream = null;
     Client = new TcpClient();
+    Address = address;
     
     await Client.ConnectAsync(address.Ip, address.Port);
     

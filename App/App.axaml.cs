@@ -20,7 +20,7 @@ public partial class App : Application
 
   public override void OnFrameworkInitializationCompleted()
   {
-    Assets.Resources.Culture = new CultureInfo("en-US");
+    Lang.Resources.Culture = new CultureInfo("en-US");
     
     var collection = new ServiceCollection();
     collection.AddCommonServices();

@@ -5,7 +5,7 @@ namespace XMPP.Core.StreamErrors;
 /// <summary>
 /// https://datatracker.ietf.org/doc/html/rfc6120#section-4.9.3.25
 /// </summary>
-[XmlRoot("unsupported-stanza-type", Namespace = "urn:ietf:params:xml:ns:xmpp-streams")]
+[XmlRoot("unsupported-version", Namespace = "urn:ietf:params:xml:ns:xmpp-streams")]
 public class UnsupportedVersion : IStreamError
 {
   public string What()

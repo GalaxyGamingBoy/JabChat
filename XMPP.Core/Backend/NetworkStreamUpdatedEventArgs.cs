@@ -4,5 +4,5 @@ namespace XMPP.Core.Backend;
 
 public class NetworkStreamUpdatedEventArgs : EventArgs
 {
-  public NetworkStream? Stream { get; set; }
+  public Stream? Stream { get; set; }
 }

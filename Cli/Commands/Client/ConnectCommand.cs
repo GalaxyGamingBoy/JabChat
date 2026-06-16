@@ -1,4 +1,5 @@
 using System.CommandLine;
+using System.Globalization;
 using Spectre.Console;
 using XMPP.Core;
 using XMPP.Core.Address;
@@ -54,7 +55,11 @@ public class ConnectCommand : Command
       return;
     }
 
-    client.Value.StreamErrorRaised += (_, err) => AnsiConsole.MarkupLine($"[bold red]ERR: {err.Error.What()}[/]");
+    client.Value.StreamErrorRaisedAsync += (sender, err) =>
+    {
+      AnsiConsole.MarkupLine($"[bold red]ERR: {err.Error.What()}[/]");
+      return Task.CompletedTask;
+    };
     
     AnsiConsole.MarkupLine($"Connecting to [yellow]{host}[/]... (Press any key to exit)");
     await client.Value.ConnectAsync();
