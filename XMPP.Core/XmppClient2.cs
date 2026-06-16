@@ -8,7 +8,7 @@ using XMPP.Core.Features;
 
 namespace XMPP.Core;
 
-public class XmppClient2 : IXmppClient
+public class XmppClient2 
 {
   #region Properties
 
@@ -178,9 +178,10 @@ public class XmppClient2 : IXmppClient
     return Result.Ok();
   }
 
-  public Task<Result> DisconnectAsync()
+  public Result Disconnect()
   {
-    return (Task<Result>)Task.CompletedTask;
+    // return (Task<Result>)Task.CompletedTask;
+    return Result.Ok();
   }
 
   public Task<Result> ReconnectAsync()

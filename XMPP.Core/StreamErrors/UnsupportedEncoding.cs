@@ -1,0 +1,15 @@
+using System.Xml.Serialization;
+
+namespace XMPP.Core.StreamErrors;
+
+/// <summary>
+/// https://datatracker.ietf.org/doc/html/rfc6120#section-4.9.3.22
+/// </summary>
+[XmlRoot("unsupported-encoding", Namespace = "urn:ietf:params:xml:ns:xmpp-streams")]
+public class UnsupportedEncoding : IStreamError
+{
+  public string What()
+  {
+    return "The initiating entity has encoded the stream in an encoding that is not supported by the server";
+  }
+}

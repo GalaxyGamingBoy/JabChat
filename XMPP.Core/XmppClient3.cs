@@ -1,12 +1,12 @@
 using System.Net.Sockets;
 using System.Text;
 using System.Xml;
-using System.Xml.Linq;
 using System.Xml.Serialization;
 using FluentResults;
 using XMPP.Core.Address;
 using XMPP.Core.Backend;
 using XMPP.Core.Features;
+using XMPP.Core.StreamErrors;
 
 namespace XMPP.Core;
 
@@ -46,6 +46,7 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
   private XmlWriter? _writer;
   
   private Dictionary<string, XmlSerializer> FeatureSerializers { get; } = new();
+  private Dictionary<string, XmlSerializer> ErrorSerializers { get; } = new();
   
   private readonly CancellationTokenSource _cts = new();
   private Task BackgroundServiceHandler { get; init; }
@@ -63,17 +64,46 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
     RegisterFeature<StartTlsFeature>();
     RegisterFeature<SaslFeature>();
     RegisterFeature<BindFeature>();
+
+    RegisterStreamError<BadFormat>();
+    RegisterStreamError<BadNamespacePrefix>();
+    RegisterStreamError<Conflict>();
+    RegisterStreamError<ConnectionTimeout>();
+    RegisterStreamError<HostGone>();
+    RegisterStreamError<HostUnknown>();
+    RegisterStreamError<ImproperAddressing>();
+    RegisterStreamError<InternalServerError>();
+    RegisterStreamError<InvalidFrom>();
+    RegisterStreamError<InvalidNamespace>();
+    RegisterStreamError<InvalidXml>();
+    RegisterStreamError<NotAuthorized>();
+    RegisterStreamError<NotAuthorized>();
+    RegisterStreamError<NotWellFormed>();
+    RegisterStreamError<PolicyViolation>();
+    RegisterStreamError<RemoteConnectionFailed>();
+    RegisterStreamError<Reset>();
+    RegisterStreamError<ResourceConstraint>();
+    RegisterStreamError<RestrictedXml>();
+    RegisterStreamError<SeeOtherHost>();
+    RegisterStreamError<SystemShutdown>();
+    RegisterStreamError<UndefinedCondition>();
+    RegisterStreamError<UnsupportedEncoding>();
+    RegisterStreamError<UnsupportedFeature>();
+    RegisterStreamError<UnsupportedStanzaType>();
+    RegisterStreamError<UnsupportedVersion>();
     
     Backend = backend;
     Backend.NetworkStreamUpdated += OnUpdatedNetworkStream;
     StreamFeatureRequested += Backend.OnStreamFeatureRequested;
+
+    StreamErrorRaised += OnStreamError;
     
     BackgroundServiceHandler = Task.Run(BackgroundService);
   }
 
   public async ValueTask DisposeAsync()
   {
-    await DisconnectAsync();
+    Disconnect();
     
     await _cts.CancelAsync();
     await BackgroundServiceHandler;
@@ -85,7 +115,7 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
 
   public void Dispose()
   {
-    DisconnectAsync().Wait();
+    Disconnect();
     
     _cts.Cancel();
     BackgroundServiceHandler.Wait();
@@ -125,6 +155,18 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
     });   
   }
 
+  private void OnStreamError(object? sender, StreamErrorEventArgs args)
+  {
+    try
+    {
+      Disconnect();
+    }
+    catch (Exception _)
+    {
+      // ignored
+    }
+  }
+
   private async Task<Result> OpenXmppStream()
   {
     if (ValidateConnectionActiveState() is { IsFailed: true } r)
@@ -132,7 +174,7 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
     
     await _stream!.WriteAsync(Encoding.UTF8.GetBytes("<?xml version='1.0'?>"));
     await _stream.WriteAsync(Encoding.UTF8.GetBytes(
-      $"<stream:stream from='{Credentials.Jid}' to='{Address.Host.TrimEnd(".")}' version='1.0' xml:lang='en' xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams'>\n"));
+      $"<stream:stream from='{Credentials.Jid}' to='{Address.Host.TrimEnd(".")}a' version='1.0' xml:lang='en' xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams'>\n"));
     await _stream.FlushAsync();
 
     XmppState = State.Negotiating;
@@ -158,15 +200,23 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
     return Result.Ok();
   }
 
-  public async Task<Result> DisconnectAsync()
+  public Result Disconnect()
   {
     if (ValidateConnectionActiveState() is { IsFailed: true } r)
       return r;
 
+    XmppState = State.Disconnected;
+    
     Backend.Disconnect();
 
-    XmppState = State.Disconnected;
     return Result.Ok();
+  }
+
+  public async Task<Result> DisconnectWithStreamCloseAsync()
+  {
+    await CloseXmppStream();
+
+    return Disconnect();
   }
 
   public async Task<Result> ReconnectAsync()
@@ -174,7 +224,7 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
     if (ValidateConnectionActiveState() is { IsFailed: true } r)
       return r;
 
-    if (await DisconnectAsync() is { IsFailed: true } resultDisconnect)
+    if (await DisconnectWithStreamCloseAsync() is { IsFailed: true } resultDisconnect)
       return resultDisconnect;
     
     if (await ConnectAsync() is { IsFailed: true } resultConnect)
@@ -198,7 +248,27 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
     return Result.Ok();
   }
 
+  public Result RegisterStreamError<T>() where T : IStreamError
+  {
+    var attr = (XmlRootAttribute?)Attribute.GetCustomAttribute(
+      typeof(T), typeof(XmlRootAttribute));
+
+    if (attr?.ElementName == null)
+      return Result.Fail($"Missing error name");
+    if (attr.Namespace == null)
+      return Result.Fail($"Missing error namespace");
+    
+    var key = $"{attr.Namespace}/{attr.ElementName}";
+    
+    if (ErrorSerializers.ContainsKey(key))
+      return Result.Fail($"Error with key {key} already registered");
+
+    ErrorSerializers.Add(key, new XmlSerializer(typeof(T)));
+    return Result.Ok();
+  }
+
   public event EventHandler<StreamFeatureRequestedEventArgs>? StreamFeatureRequested;
+  public event EventHandler<StreamErrorEventArgs>? StreamErrorRaised;
 
   private async Task BackgroundService()
   {
@@ -219,6 +289,19 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
       
       if (_reader.Name == "stream:stream")
         continue; // todo: store stream from server
+
+      if (_reader.Name == "stream:error")
+      {
+        using var sub = _reader.ReadSubtree();
+        await sub.ReadAsync();
+        await sub.ReadAsync();
+        
+        ErrorSerializers.TryGetValue($"{sub.NamespaceURI}/{sub.Name}", out var errorSerializer);
+        var error  = errorSerializer?.Deserialize(sub);
+        if (error == null) continue;
+        
+        StreamErrorRaised?.Invoke(this, new StreamErrorEventArgs() { Error = (IStreamError) error });
+      }
 
       if (_reader.Name == "stream:features")
       {

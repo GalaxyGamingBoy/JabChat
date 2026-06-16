@@ -9,7 +9,7 @@ using XMPP.Core.Features;
 
 namespace XMPP.Core;
 
-public class XmppClient(XmppCreds creds) : IXmppClient, IAsyncDisposable
+public class XmppClient(XmppCreds creds) 
 {
   private readonly TcpClient _client = new TcpClient();
   private readonly CancellationTokenSource _cts = new();
@@ -64,7 +64,7 @@ public class XmppClient(XmppCreds creds) : IXmppClient, IAsyncDisposable
     throw new NotImplementedException();
   }
 
-  public Task<Result> DisconnectAsync()
+  public Result Disconnect()
   {
     throw new NotImplementedException();
   }
