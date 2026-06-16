@@ -16,6 +16,12 @@ public class TcpXmppBackend : IXmppClientBackend
     NetworkStreamUpdated?.Invoke(this, new NetworkStreamUpdatedEventArgs { Stream = Stream });
   }
 
+  public void OnStreamFeatureRequested(object? sender, StreamFeatureRequestedEventArgs eventArgs)
+  {
+    if (eventArgs.Feature is Features.StartTlsFeature)
+      Console.WriteLine("Attempting to upgrade session to TLS");
+  }
+
   public event EventHandler<NetworkStreamUpdatedEventArgs>? NetworkStreamUpdated;
 
   public void Dispose()

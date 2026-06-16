@@ -1,9 +1,12 @@
 using System.Net.Sockets;
 using System.Text;
 using System.Xml;
+using System.Xml.Linq;
+using System.Xml.Serialization;
 using FluentResults;
 using XMPP.Core.Address;
 using XMPP.Core.Backend;
+using XMPP.Core.Features;
 
 namespace XMPP.Core;
 
@@ -42,6 +45,8 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
   private XmlReader? _reader;
   private XmlWriter? _writer;
   
+  private Dictionary<string, XmlSerializer> FeatureSerializers { get; } = new();
+  
   private readonly CancellationTokenSource _cts = new();
   private Task BackgroundServiceHandler { get; init; }
   
@@ -55,9 +60,15 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
 
   public XmppClient3(IXmppClientBackend backend)
   {
+    RegisterFeature<StartTlsFeature>();
+    RegisterFeature<SaslFeature>();
+    RegisterFeature<BindFeature>();
+    
     Backend = backend;
-    BackgroundServiceHandler = Task.Run(BackgroundService);
     Backend.NetworkStreamUpdated += OnUpdatedNetworkStream;
+    StreamFeatureRequested += Backend.OnStreamFeatureRequested;
+    
+    BackgroundServiceHandler = Task.Run(BackgroundService);
   }
 
   public async ValueTask DisposeAsync()
@@ -174,8 +185,20 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
 
   public Result RegisterFeature<T>()
   {
-    throw new NotImplementedException();
+    var attr = (XmlRootAttribute?)Attribute.GetCustomAttribute(
+      typeof(T), typeof(XmlRootAttribute));
+
+    if (attr?.Namespace == null)
+      return Result.Fail($"Missing feature namespace");
+    
+    if (FeatureSerializers.ContainsKey(attr.Namespace))
+      return Result.Fail($"Namespace {attr.Namespace} already registered");
+
+    FeatureSerializers.Add(attr.Namespace, new XmlSerializer(typeof(T)));
+    return Result.Ok();
   }
+
+  public event EventHandler<StreamFeatureRequestedEventArgs>? StreamFeatureRequested;
 
   private async Task BackgroundService()
   {
@@ -199,7 +222,18 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
 
       if (_reader.Name == "stream:features")
       {
+        using var sub = _reader.ReadSubtree();
+        await sub.ReadAsync();
         
+        while (await sub.ReadAsync())
+          if (sub is { NodeType: XmlNodeType.Element, Depth: 1 })
+          {
+            FeatureSerializers.TryGetValue(sub.NamespaceURI, out var featureSerializer);
+            if (featureSerializer == null) continue;
+            var feature = featureSerializer.Deserialize(sub);
+            if (feature == null) continue;
+            StreamFeatureRequested?.Invoke(this, new StreamFeatureRequestedEventArgs { Feature = feature });
+          }
       }
       
       // todo: proc

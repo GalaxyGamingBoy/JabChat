@@ -90,6 +90,8 @@ public class XmppClient(XmppCreds creds) : IXmppClient, IAsyncDisposable
     throw new NotImplementedException();
   }
 
+  public event EventHandler<StreamFeatureRequestedEventArgs>? StreamFeatureRequested;
+
   public void RegisterFeature<T>(string ns) where T : IXmlSerializable
   {
     throw new NotImplementedException();

@@ -260,6 +260,8 @@ public class XmppClient2 : IXmppClient
     return Result.Ok();
   }
 
+  public event EventHandler<StreamFeatureRequestedEventArgs>? StreamFeatureRequested;
+
   #endregion
   
   #region Background Service

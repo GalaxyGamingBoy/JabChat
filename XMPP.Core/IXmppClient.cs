@@ -6,8 +6,6 @@ namespace XMPP.Core;
 
 public interface IXmppClient
 {
-  // new api
-  
   /// <summary>
   /// Connects asynchronously to the XMPP Server
   /// </summary>
@@ -28,4 +26,6 @@ public interface IXmppClient
   /// </summary>
   /// <typeparam name="T">Feature Object</typeparam>
   public Result RegisterFeature<T>();
+  
+  event EventHandler<StreamFeatureRequestedEventArgs> StreamFeatureRequested;  
 }

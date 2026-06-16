@@ -11,5 +11,7 @@ public interface IXmppClientBackend : IDisposable
   
   void Disconnect();
   
+  void OnStreamFeatureRequested(object? sender, StreamFeatureRequestedEventArgs eventArgs);
+  
   event EventHandler<NetworkStreamUpdatedEventArgs> NetworkStreamUpdated;  
 }
