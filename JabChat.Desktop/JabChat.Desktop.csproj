@@ -4,6 +4,7 @@
         <TargetFramework>net10.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+        <RootNamespace>App.Desktop</RootNamespace>
     </PropertyGroup>
 
     <PropertyGroup>
@@ -19,6 +20,6 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\App\App.csproj" />
+        <ProjectReference Include="..\JabChat\JabChat.csproj" />
     </ItemGroup>
 </Project>

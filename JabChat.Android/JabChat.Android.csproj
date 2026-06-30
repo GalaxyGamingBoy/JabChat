@@ -6,11 +6,12 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
 
-        <ApplicationId>gitlab.mitsiosm.JabChat</ApplicationId>
+        <ApplicationId>io.gitlab.mitsiosm.JabChat</ApplicationId>
         <ApplicationVersion>1</ApplicationVersion>
         <ApplicationDisplayVersion>0.1</ApplicationDisplayVersion>
         <AndroidPackageFormat>apk</AndroidPackageFormat>
         <AndroidEnableProfiledAot>false</AndroidEnableProfiledAot>
+        <RootNamespace>App.Android</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>
@@ -25,6 +26,6 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\App\App.csproj" />
+        <ProjectReference Include="..\JabChat\JabChat.csproj" />
     </ItemGroup>
 </Project>

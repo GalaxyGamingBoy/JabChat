@@ -1,8 +1,4 @@
 <Solution>
-  <Project Path="App/App.csproj" />
-  <Project Path="App.Android/App.Android.csproj" />
-  <Project Path="App.Browser/App.Browser.csproj" />
-  <Project Path="App.Desktop/App.Desktop.csproj" />
   
   <Project Path="Cli/Cli.csproj" />
   
@@ -10,5 +6,9 @@
   <Project Path="XMPP.XEP.0030/XMPP.XEP.0030.csproj" />
   
   <Project Path="XMPP.Tests/XMPP.Tests.csproj" />
+  <Project Path="JabChat.Android\JabChat.Android.csproj" />
+  <Project Path="JabChat.Browser\JabChat.Browser.csproj" />
+  <Project Path="JabChat.Desktop\JabChat.Desktop.csproj" />
+  <Project Path="JabChat\JabChat.csproj" />
   <Project Path="XMPP.Core.Tests/XMPP.Core.Tests.csproj" />
 </Solution>

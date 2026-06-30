@@ -6,6 +6,7 @@
         <LangVersion>latest</LangVersion>
         <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
         <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+        <RootNamespace>App</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>
@@ -25,14 +26,14 @@
     </ItemGroup>
 
     <ItemGroup>
-      <EmbeddedResource Update="Assets\Resources.resx">
+      <EmbeddedResource Update="Lang\Resources.resx">
         <Generator>PublicResXFileCodeGenerator</Generator>
         <LastGenOutput>Resources.Designer.cs</LastGenOutput>
       </EmbeddedResource>
     </ItemGroup>
 
     <ItemGroup>
-      <Compile Update="Assets\Resources.Designer.cs">
+      <Compile Update="Lang\Resources.Designer.cs">
         <DesignTime>True</DesignTime>
         <AutoGen>True</AutoGen>
         <DependentUpon>Resources.resx</DependentUpon>

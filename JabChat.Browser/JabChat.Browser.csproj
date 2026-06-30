@@ -5,6 +5,7 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <Nullable>enable</Nullable>
+        <RootNamespace>App.Browser</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>
@@ -12,6 +13,6 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\App\App.csproj" />
+        <ProjectReference Include="..\JabChat\JabChat.csproj" />
     </ItemGroup>
 </Project>
