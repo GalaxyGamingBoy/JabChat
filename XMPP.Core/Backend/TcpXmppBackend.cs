@@ -5,7 +5,7 @@ using XMPP.Core.Address;
 
 namespace XMPP.Core.Backend;
 
-public class TcpXmppBackend : IXmppClientBackend
+public class TcpXmppBackend(bool forceTls) : IXmppClientBackend
 {
   private IXmppAddressProvider Provider { get; } = new XmppAddressProvider();
   
@@ -59,7 +59,7 @@ public class TcpXmppBackend : IXmppClientBackend
 
   public Task OnStreamFeatureRequested(object? sender, StreamFeatureRequestedEventArgs eventArgs)
   {
-    if (eventArgs.Feature is Features.StartTlsFeature)
+    if (eventArgs.Feature is Features.StartTlsFeature || (SslStream is null && forceTls))
     {
       Console.WriteLine("Attempting to upgrade session to TLS");
       ((IXmppClient)sender!).SendStanza(new StartTls.Command());
@@ -74,6 +74,7 @@ public class TcpXmppBackend : IXmppClientBackend
   {
     Stream?.Dispose();
     Client?.Dispose();
+    SslStream?.Dispose();
   }
 
   public async Task<Result> ConnectAsync(string host)
@@ -103,9 +104,11 @@ public class TcpXmppBackend : IXmppClientBackend
 
   public void Disconnect()
   {
+    SslStream?.Close();
     Stream?.Close();
     Client?.Close();
     
+    SslStream = null;
     Stream = null;
     Client = null;
     

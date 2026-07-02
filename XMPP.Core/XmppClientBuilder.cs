@@ -12,6 +12,7 @@ public class XmppClientBuilder
   private XmppBackend _backend = XmppBackend.Tcp;
   private string? _jid = null;
   private string? _password = null;
+  private bool _forceTls = false;
   
   private XmppAddressProvider _addressProvider = new XmppAddressProvider();
 
@@ -57,6 +58,12 @@ public class XmppClientBuilder
     return this;
   }
 
+  public XmppClientBuilder ForceTls()
+  {
+    this._forceTls = true;
+    return this;
+  }
+
   public async Task<Result<IXmppClient>> BuildAsync()
   {
     if (_address is null && _host is null)
@@ -87,7 +94,7 @@ public class XmppClientBuilder
 
   private IXmppClientBackend GetBackend() => _backend switch
   {
-    XmppBackend.Tcp => new TcpXmppBackend(),
+    XmppBackend.Tcp => new TcpXmppBackend(this._forceTls),
     XmppBackend.Websocket => throw new NotImplementedException(),
     _ => throw new ArgumentOutOfRangeException()
   };
