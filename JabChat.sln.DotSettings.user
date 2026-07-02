@@ -35,8 +35,8 @@
 	<s:Boolean x:Key="/Default/ResxEditorPersonal/CheckedGroups/=App_002FAssets_002FResources1resx/@EntryIndexRemoved">True</s:Boolean>
 	<s:Boolean x:Key="/Default/ResxEditorPersonal/CheckedGroups/=JabChat_002FLang_002FResources/@EntryIndexedValue">True</s:Boolean>
 	<s:Boolean x:Key="/Default/ResxEditorPersonal/Initialized/@EntryValue">True</s:Boolean>
-	<s:Boolean x:Key="/Default/UnloadedProject/UnloadedProjects/=02060c16_002Dd5bc_002Db324_002D6900_002Dcc3a2f721f08_0023XMPP_002ECore/@EntryIndexedValue">True</s:Boolean>
-	<s:Boolean x:Key="/Default/UnloadedProject/UnloadedProjects/=06a18784_002D0637_002Dd443_002D2e01_002D0885cf7266df_0023Cli/@EntryIndexedValue">True</s:Boolean>
+	
+	
 	<s:Boolean x:Key="/Default/UnloadedProject/UnloadedProjects/=402450f0_002D43f0_002D8ddf_002D1396_002D637cef36104e_0023JabChat_002EAndroid/@EntryIndexedValue">True</s:Boolean>
 	<s:Boolean x:Key="/Default/UnloadedProject/UnloadedProjects/=6c0de392_002D145f_002D98ba_002D45f7_002D512b74659589_0023XMPP_002ECore_002ETests/@EntryIndexedValue">True</s:Boolean>
 	<s:Boolean x:Key="/Default/UnloadedProject/UnloadedProjects/=6c0f928a_002Db28d_002Dd207_002Dd239_002D598f22ccd0b7_0023App/@EntryIndexedValue">True</s:Boolean>

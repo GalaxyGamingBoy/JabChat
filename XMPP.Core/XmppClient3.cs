@@ -327,6 +327,7 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
 
     while (!_cts.IsCancellationRequested)
     {
+      // Await ReadLock approval
       try
       {
         await ReadLock.WaitAsync(_cts.Token);
