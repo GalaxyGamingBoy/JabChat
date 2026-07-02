@@ -1,6 +1,4 @@
-using System.Xml.Serialization;
 using FluentResults;
-using XMPP.Core.Address;
 using XMPP.Core.StreamErrors;
 
 namespace XMPP.Core;
@@ -31,8 +29,8 @@ public interface IXmppClient
   /// </summary>
   /// <typeparam name="T">Feature Object</typeparam>
   public Result RegisterFeature<T>();
-  
-  public Result RegisterUnexpectedStanza<T>();
+
+  public Result RegisterUnexpectedStanza<T>(Action<object, object?> func);
 
   public Result RegisterStreamError<T>() where T : IStreamError;
 
@@ -40,7 +38,6 @@ public interface IXmppClient
   
   event AsyncEventHandler<StreamFeatureRequestedEventArgs>? StreamFeatureRequestedAsync;
   event AsyncEventHandler<StreamErrorEventArgs>? StreamErrorRaisedAsync;
-  event AsyncEventHandler<UnexpectedStanzaReceivedEventArgs> UnexpectedStanzaReceivedAsync;
 
   public void StartBackgroundService();
   public Task StopBackgroundService();

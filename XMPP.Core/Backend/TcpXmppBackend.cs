@@ -9,11 +9,11 @@ public class TcpXmppBackend : IXmppClientBackend
 {
   private IXmppAddressProvider Provider { get; } = new XmppAddressProvider();
   
-  private TcpClient? Client { get; set; } = null;
-  private NetworkStream? Stream { get; set; } = null;
-  private SslStream? SslStream { get; set; } = null;
-  private XmppAddress? Address { get; set; } = null;
-
+  private TcpClient? Client { get; set; }
+  private NetworkStream? Stream { get; set; }
+  private SslStream? SslStream { get; set; }
+  private XmppAddress? Address { get; set; }
+  
   private async Task UpgradeSslStream(IXmppClient xmppClient)
   {
     if (Client is null || Stream is null)
@@ -29,12 +29,32 @@ public class TcpXmppBackend : IXmppClientBackend
     await SslStream.AuthenticateAsClientAsync(new SslClientAuthenticationOptions()
     {
       AllowRenegotiation = false,
-      TargetHost =  Address!.Host.TrimEnd(".").ToString()
+      TargetHost = Address!.Host.TrimEnd(".").ToString()
     });
     
     NetworkStreamUpdated?.Invoke(this, new NetworkStreamUpdatedEventArgs() {Stream = SslStream});
     xmppClient.StartBackgroundService();
     xmppClient.ReadLock.Release();
+  }
+
+  private async void OnStartTlsProceed(object sender, object? stanza)
+  {
+    Console.WriteLine("Server confirmed TLS upgrade, proceeding...");
+    await UpgradeSslStream((IXmppClient) sender);
+      
+    await ((XmppClient3)sender).OpenXmppStream();
+    Console.WriteLine("TLS upgrade complete");
+  }
+
+  private void OnStartTlsFailure(object sender, object? stanza)
+  {
+    Console.WriteLine("Server rejected TLS upgrade");
+  }
+
+  public void UseClient(IXmppClient client)
+  {
+    client.RegisterUnexpectedStanza<StartTls.Proceed>(OnStartTlsProceed);
+    client.RegisterUnexpectedStanza<StartTls.Failure>(OnStartTlsFailure);
   }
 
   public Task OnStreamFeatureRequested(object? sender, StreamFeatureRequestedEventArgs eventArgs)
@@ -46,18 +66,6 @@ public class TcpXmppBackend : IXmppClientBackend
     }
     
     return Task.CompletedTask;
-  }
-
-  public async Task OnUnexpectedStanzaReceived(object? sender, UnexpectedStanzaReceivedEventArgs eventArgs)
-  {
-    if (eventArgs.Element is StartTls.Proceed)
-    {
-      Console.WriteLine("Server confirmed TLS upgrade, proceeding...");
-      await UpgradeSslStream((IXmppClient) sender!);
-      
-      await ((XmppClient3)sender!).OpenXmppStream();
-      Console.WriteLine("TLS upgrade complete");
-    }
   }
 
   public event EventHandler<NetworkStreamUpdatedEventArgs>? NetworkStreamUpdated;

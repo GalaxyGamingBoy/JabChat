@@ -37,12 +37,14 @@
 	<s:Boolean x:Key="/Default/ResxEditorPersonal/Initialized/@EntryValue">True</s:Boolean>
 	<s:Boolean x:Key="/Default/UnloadedProject/UnloadedProjects/=02060c16_002Dd5bc_002Db324_002D6900_002Dcc3a2f721f08_0023XMPP_002ECore/@EntryIndexedValue">True</s:Boolean>
 	<s:Boolean x:Key="/Default/UnloadedProject/UnloadedProjects/=06a18784_002D0637_002Dd443_002D2e01_002D0885cf7266df_0023Cli/@EntryIndexedValue">True</s:Boolean>
+	<s:Boolean x:Key="/Default/UnloadedProject/UnloadedProjects/=402450f0_002D43f0_002D8ddf_002D1396_002D637cef36104e_0023JabChat_002EAndroid/@EntryIndexedValue">True</s:Boolean>
 	<s:Boolean x:Key="/Default/UnloadedProject/UnloadedProjects/=6c0de392_002D145f_002D98ba_002D45f7_002D512b74659589_0023XMPP_002ECore_002ETests/@EntryIndexedValue">True</s:Boolean>
 	<s:Boolean x:Key="/Default/UnloadedProject/UnloadedProjects/=6c0f928a_002Db28d_002Dd207_002Dd239_002D598f22ccd0b7_0023App/@EntryIndexedValue">True</s:Boolean>
 	
 	<s:Boolean x:Key="/Default/UnloadedProject/UnloadedProjects/=bd0fb999_002Dfffb_002D593b_002D9a21_002D6bb2b0d8b77a_0023XMPP_002ETests/@EntryIndexedValue">True</s:Boolean>
 	
 	<s:Boolean x:Key="/Default/UnloadedProject/UnloadedProjects/=d4a89563_002D81d9_002Dab61_002D0221_002D59c125300e3a_0023XMPP_002EXEP_002E0030/@EntryIndexedValue">True</s:Boolean>
+	<s:Boolean x:Key="/Default/UnloadedProject/UnloadedProjects/=dc013dfc_002De907_002De1df_002Dae53_002D723383f6688b_0023JabChat_002EBrowser/@EntryIndexedValue">True</s:Boolean>
 	
 	<s:Boolean x:Key="/Default/UnloadedProject/UnloadedProjects/=eec64bc1_002D09d3_002Ddbba_002D3349_002D163518a5f63e_0023App_002EAndroid/@EntryIndexedValue">True</s:Boolean>
 	</wpf:ResourceDictionary>

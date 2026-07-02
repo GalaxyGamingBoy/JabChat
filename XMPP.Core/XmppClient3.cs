@@ -48,7 +48,7 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
 
   private Dictionary<string, XmlSerializer> FeatureSerializers { get; } = new();
   private Dictionary<string, XmlSerializer> ErrorSerializers { get; } = new();
-  private Dictionary<string, XmlSerializer> UnexpectedStanzaSerializers { get; } = new();
+  private Dictionary<string, (XmlSerializer, Action<object, object?>)> UnexpectedStanzaSerializers { get; } = new();
 
   private CancellationTokenSource _cts = new();
   private Task? BackgroundServiceHandler { get; set; }
@@ -102,13 +102,10 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
     RegisterStreamError<UnsupportedStanzaType>();
     RegisterStreamError<UnsupportedVersion>();
 
-    RegisterUnexpectedStanza<StartTls.Proceed>();
-    RegisterUnexpectedStanza<StartTls.Failure>();
-
     Backend = backend;
+    Backend.UseClient(this);
     Backend.NetworkStreamUpdated += OnUpdatedNetworkStream;
     StreamFeatureRequestedAsync += Backend.OnStreamFeatureRequested;
-    UnexpectedStanzaReceivedAsync += Backend.OnUnexpectedStanzaReceived;
 
     StreamErrorRaisedAsync += OnStreamError;
   }
@@ -265,7 +262,7 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
     return Result.Ok();
   }
 
-  public Result RegisterUnexpectedStanza<T>()
+  public Result RegisterUnexpectedStanza<T>(Action<object, object?> func)
   {
     var attr = (XmlRootAttribute?)Attribute.GetCustomAttribute(
       typeof(T), typeof(XmlRootAttribute));
@@ -280,7 +277,7 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
     if (UnexpectedStanzaSerializers.ContainsKey(key))
       return Result.Fail($"Stanza with key {key} already registered");
 
-    UnexpectedStanzaSerializers.Add(key, new XmlSerializer(typeof(T)));
+    UnexpectedStanzaSerializers.Add(key, (new XmlSerializer(typeof(T)), func));
     return Result.Ok();
   }
 
@@ -305,7 +302,6 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
 
   public event AsyncEventHandler<StreamFeatureRequestedEventArgs>? StreamFeatureRequestedAsync;
   public event AsyncEventHandler<StreamErrorEventArgs>? StreamErrorRaisedAsync;
-  public event AsyncEventHandler<UnexpectedStanzaReceivedEventArgs> UnexpectedStanzaReceivedAsync;
 
   public void StartBackgroundService()
   {
@@ -378,6 +374,7 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
         while (await sub.ReadAsync())
           if (sub is { NodeType: XmlNodeType.Element, Depth: 1 })
           {
+            Console.WriteLine($"F> {sub.Name}: {sub.NamespaceURI}");
             FeatureSerializers.TryGetValue(sub.NamespaceURI, out var featureSerializer);
             var feature = featureSerializer?.Deserialize(sub);
             if (feature != null)
@@ -390,16 +387,16 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
 
       {
         using var sub = reader.ReadSubtree();
-        UnexpectedStanzaSerializers.TryGetValue($"{reader.NamespaceURI}/{reader.Name}", out var stanzaSerializer);
-        var stanza = stanzaSerializer?.Deserialize(sub);
-        if (stanza == null)
+        var found = UnexpectedStanzaSerializers.TryGetValue($"{reader.NamespaceURI}/{reader.Name}", out var stanzaSerializer);
+        
+        if (!found)
         {
           ReadLock.Release();
           continue;
         }
-
-        _ = Task.Run(() =>
-          UnexpectedStanzaReceivedAsync.Invoke(this, new UnexpectedStanzaReceivedEventArgs() { Element = stanza }));
+        
+        var stanza = stanzaSerializer.Item1.Deserialize(sub);
+        _ = Task.Run(() => stanzaSerializer.Item2.Invoke(this, stanza));
       }
     }
   }
