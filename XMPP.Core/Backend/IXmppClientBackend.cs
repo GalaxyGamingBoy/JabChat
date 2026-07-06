@@ -1,4 +1,6 @@
 using System.Net.Sockets;
+using System.Security.Authentication;
+using System.Security.Cryptography.X509Certificates;
 using FluentResults;
 using XMPP.Core.Address;
 

@@ -1,4 +1,7 @@
+using System.Xml;
+using System.Xml.Linq;
 using FluentResults;
+using XMPP.Core.SaslMechanisms;
 using XMPP.Core.StreamErrors;
 
 namespace XMPP.Core;
@@ -22,7 +25,8 @@ public interface IXmppClient
   /// </summary>
   public Task<Result> ReconnectAsync();
 
-  public Result SendStanza(object element);
+  public Task<Result> SendStanzaAsync(object element);
+  public Task<Result> SendStanzaAsync(XElement element);
 
   /// <summary>
   /// Registers a XMPP stream feature for deserialization
@@ -34,10 +38,14 @@ public interface IXmppClient
 
   public Result RegisterStreamError<T>() where T : IStreamError;
 
+  public void RegisterSaslMechanism<T>() where T : ISaslMechanism, new();
+
   public Task<Result> OpenXmppStream();
   
   event AsyncEventHandler<StreamFeatureRequestedEventArgs>? StreamFeatureRequestedAsync;
   event AsyncEventHandler<StreamErrorEventArgs>? StreamErrorRaisedAsync;
+  
+  public Task SaslCompleted();
 
   public void StartBackgroundService();
   public Task StopBackgroundService();

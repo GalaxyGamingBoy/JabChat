@@ -1,10 +1,12 @@
 using System.Text;
 using System.Xml;
+using System.Xml.Linq;
 using System.Xml.Serialization;
 using FluentResults;
 using XMPP.Core.Address;
 using XMPP.Core.Backend;
 using XMPP.Core.Features;
+using XMPP.Core.SaslMechanisms;
 using XMPP.Core.StreamErrors;
 
 namespace XMPP.Core;
@@ -49,6 +51,7 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
   private Dictionary<string, XmlSerializer> FeatureSerializers { get; } = new();
   private Dictionary<string, XmlSerializer> ErrorSerializers { get; } = new();
   private Dictionary<string, (XmlSerializer, Action<object, object?>)> UnexpectedStanzaSerializers { get; } = new();
+  private SortedList<int, ISaslMechanism> SaslHandlers { get; } = new();
 
   private CancellationTokenSource _cts = new();
   private Task? BackgroundServiceHandler { get; set; }
@@ -101,11 +104,17 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
     RegisterStreamError<UnsupportedFeature>();
     RegisterStreamError<UnsupportedStanzaType>();
     RegisterStreamError<UnsupportedVersion>();
+    
+    RegisterSaslMechanism<PlainSaslMechanism>();
+    RegisterSaslMechanism<ScramSha1SaslMechanism>();
+    RegisterSaslMechanism<ScramSha256SaslMechanism>();
 
     Backend = backend;
     Backend.UseClient(this);
     Backend.NetworkStreamUpdated += OnUpdatedNetworkStream;
     StreamFeatureRequestedAsync += Backend.OnStreamFeatureRequested;
+    
+    StreamFeatureRequestedAsync += SaslHandler;
 
     StreamErrorRaisedAsync += OnStreamError;
   }
@@ -139,7 +148,7 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
     _stream = stream;
     _writer = XmlWriter.Create(_stream, new XmlWriterSettings
     {
-      Async = true, CloseOutput = false, OmitXmlDeclaration = true
+      Async = true, CloseOutput = false, OmitXmlDeclaration = true, ConformanceLevel = ConformanceLevel.Auto
     });
   }
 
@@ -155,11 +164,29 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
     }
   }
 
+  private async Task SaslHandler(object? sender, StreamFeatureRequestedEventArgs args)
+  {
+    if (args.Feature is not SaslFeature sasl)
+      return;
+    
+    Console.WriteLine("Supported SASL mechanisms:");
+    sasl.Mechanisms.ForEach(Console.WriteLine);
+
+    foreach (var mechanism in SaslHandlers
+               .Where(mechanism
+                 => sasl.Mechanisms.Contains(mechanism.Value.Mechanism)))
+    {
+      Console.WriteLine($"Using P{mechanism.Key}: {mechanism.Value.Mechanism}");
+      await mechanism.Value.Use(Credentials);
+      break;
+    }
+  }
+
   public async Task<Result> OpenXmppStream()
   {
     if (ValidateStreamValidState() is { IsFailed: true } r)
       return r;
-
+    
     await WriteLock.WaitAsync();
     await _stream!.WriteAsync("<?xml version='1.0'?>"u8.ToArray());
     await _stream.WriteAsync(Encoding.UTF8.GetBytes(
@@ -233,15 +260,28 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
     return Result.Ok();
   }
 
-  public Result SendStanza(object element)
+  public async Task<Result> SendStanzaAsync(object element)
   {
     if (ValidateConnectionActiveState() is { IsFailed: true } r)
       return r;
 
-    WriteLock.Wait();
+    await WriteLock.WaitAsync();
     var serializer = new XmlSerializer(element.GetType());
     serializer.Serialize(_writer!, element);
-    _writer!.Flush();
+    await _writer!.FlushAsync();
+    WriteLock.Release();
+
+    return Result.Ok();
+  }
+  
+  public async Task<Result> SendStanzaAsync(XElement element)
+  {
+    if (ValidateConnectionActiveState() is { IsFailed: true } r)
+      return r;
+
+    await WriteLock.WaitAsync();
+    element.WriteTo(_writer!);
+    await _writer!.FlushAsync();
     WriteLock.Release();
 
     return Result.Ok();
@@ -260,6 +300,13 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
 
     FeatureSerializers.Add(attr.Namespace, new XmlSerializer(typeof(T)));
     return Result.Ok();
+  }
+
+  public void RegisterSaslMechanism<T>() where T : ISaslMechanism, new()
+  {
+    var mech = new T();
+    mech.BindClient(this);
+    SaslHandlers[mech.Priority] = mech;
   }
 
   public Result RegisterUnexpectedStanza<T>(Action<object, object?> func)
@@ -302,6 +349,11 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
 
   public event AsyncEventHandler<StreamFeatureRequestedEventArgs>? StreamFeatureRequestedAsync;
   public event AsyncEventHandler<StreamErrorEventArgs>? StreamErrorRaisedAsync;
+
+  public async Task SaslCompleted()
+  {
+    await OpenXmppStream();
+  }
 
   public void StartBackgroundService()
   {
@@ -384,6 +436,12 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
 
         ReadLock.Release();
         continue;
+      }
+
+      if (reader.Name == "failure")
+      {
+        Console.WriteLine("ERR");
+        Console.WriteLine(reader.HasValue);
       }
 
       {
