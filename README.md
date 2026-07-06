@@ -1,3 +1,3 @@
 # JabChat.NET
 
-A .NET XMPP Chat Client
+A XMPP chat client application, powered by .NET and Avalonia.
