@@ -15,9 +15,19 @@ public class PlainSaslMechanism : ISaslMechanism
   {
     _client = client;
   }
+  
+  private async void OnSuccessReceived(object sender, object? successMessageReceived)
+  {
+    await _client.StopBackgroundService();
+    await _client.SaslCompleted();
+    _client.StartBackgroundService();
+    _client.ReadLock.Release();
+  }
 
   public async Task Use(XmppCreds credentials)
   {
+    _client.RegisterUnexpectedStanza<SaslSuccess>(OnSuccessReceived);
+    
     var localpart = credentials.Jid.Split("@")[0];
     var message = $"\0{localpart}\0{credentials.Password}";
     
