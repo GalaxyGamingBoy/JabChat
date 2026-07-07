@@ -10,10 +10,12 @@ public class XmppClientBuilder
   private XmppAddress?  _address;
   
   private XmppBackend _backend = XmppBackend.Tcp;
-  private string? _jid = null;
-  private string? _password = null;
-  private bool _forceTls = false;
+  
+  private string? _username;
+  private string? _password;
   private string _resource = Guid.NewGuid().ToString();
+  
+  private bool _forceTls;
   
   private XmppAddressProvider _addressProvider = new XmppAddressProvider();
 
@@ -26,6 +28,7 @@ public class XmppClientBuilder
   public XmppClientBuilder UseAddress(XmppAddress address)
   {
     this._address = address;
+    _host = address.Host;
     return this;
   }
 
@@ -47,9 +50,9 @@ public class XmppClientBuilder
     return this;
   }
 
-  public XmppClientBuilder UseJid(string jid)
+  public XmppClientBuilder UseUsername(string username)
   {
-    this._jid = jid;
+    this._username = username;
     return this;
   }
 
@@ -73,11 +76,11 @@ public class XmppClientBuilder
 
   public async Task<Result<IXmppClient>> BuildAsync()
   {
-    if (_address is null && _host is null)
+    if (_host is null)
       return Result.Fail("Address or Host not specified.");
     
-    if (_jid is null)
-      return Result.Fail("JID not specified.");
+    if (_username is null)
+      return Result.Fail("Username not specified.");
     
     if (_password is null)
       return Result.Fail("Password not specified.");
@@ -90,13 +93,18 @@ public class XmppClientBuilder
     
       _address = address;
     }
-  
+
+    var jid = new XmppJid()
+    {
+      LocalPart = _username,
+      DomainPart = _host,
+      Resource = _resource
+    };
 
     return new XmppClient3(GetBackend())
     {
-      Credentials = new XmppCreds(_jid, _password),
+      Credentials = new XmppCredentials(jid, _password),
       Address = _address,
-      PreferredResource = _resource,
     };
   }
 

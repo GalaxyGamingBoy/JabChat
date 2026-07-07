@@ -20,7 +20,7 @@ public class XmppClient2
   /// <summary>
   /// The XMPP Credentials for the client to use
   /// </summary>
-  public required XmppCreds Credentials { get; init; }
+  public required XmppCredentials Credentials { get; init; }
   
   /// <summary>
   /// If a server has optional TLS support, prefer to use it instead of plain

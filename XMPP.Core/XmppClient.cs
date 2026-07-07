@@ -9,7 +9,7 @@ using XMPP.Core.Features;
 
 namespace XMPP.Core;
 
-public class XmppClient(XmppCreds creds) 
+public class XmppClient(XmppCredentials creds) 
 {
   private readonly TcpClient _client = new TcpClient();
   private readonly CancellationTokenSource _cts = new();
@@ -18,7 +18,7 @@ public class XmppClient(XmppCreds creds)
   private XmlWriter? _writer;
   private Task? _backgroundService;
 
-  private XmppCreds Credentials { get; } = creds;
+  private XmppCredentials Credentials { get; } = creds;
   
   public async ValueTask DisposeAsync()
   {

@@ -40,10 +40,9 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
   }
 
   public required XmppAddress Address { get; init; }
-  public required XmppCreds Credentials { get; init; }
-  public required string PreferredResource { get; init; }
+  public required XmppCredentials Credentials { get; init; }
   
-  public string FullJid { get; set; } = string.Empty;
+  public XmppJid? FullJid { get; set; }
   
   public IXmppClientBackend Backend { get; init; }
 
@@ -209,13 +208,13 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
     if (args.Feature is not BindFeature)
       return;
     
-    Console.WriteLine($"Binding to resource {PreferredResource}");
+    Console.WriteLine($"Binding to resource {Credentials.Jid.Resource}");
     var query = new InfoQuery()
     {
       Type = InfoQueryType.Set,
       ResourceBind = new InfoQuery.Bind()
       {
-        Resource = PreferredResource,
+        Resource = Credentials.Jid.Resource,
       }
     };
     
@@ -223,11 +222,17 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
     if (result.IsFailed)
     {
       // todo: throw err
-      Console.WriteLine($"Failed to bind to resource {PreferredResource}");
+      Console.WriteLine($"Failed to bind to resource {Credentials.Jid.Resource}");
       return;
     }
     
-    FullJid = result.Value.ResourceBind!.Jid!;
+    FullJid = new XmppJid()
+    {
+      LocalPart = Credentials.Jid.LocalPart,
+      DomainPart = Credentials.Jid.DomainPart,
+      Resource = Credentials.Jid.Resource,
+    };
+    
     Console.WriteLine($"XMPP Client Connected to JID {FullJid}");
     
     XmppState = State.Connected;

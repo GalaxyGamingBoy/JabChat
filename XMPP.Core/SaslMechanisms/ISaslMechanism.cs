@@ -8,5 +8,5 @@ public interface ISaslMechanism
   public int Priority { get; }
   
   void BindClient(IXmppClient client);
-  Task Use(XmppCreds credentials);
+  Task Use(XmppCredentials credentials);
 }

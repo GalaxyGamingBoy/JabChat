@@ -24,12 +24,11 @@ public class PlainSaslMechanism : ISaslMechanism
     _client.ReadLock.Release();
   }
 
-  public async Task Use(XmppCreds credentials)
+  public async Task Use(XmppCredentials credentials)
   {
     _client.RegisterUnexpectedStanza<SaslSuccess>(OnSuccessReceived);
     
-    var localpart = credentials.Jid.Split("@")[0];
-    var message = $"\0{localpart}\0{credentials.Password}";
+    var message = $"\0{credentials.Jid.LocalPart}\0{credentials.Password}";
     
     XNamespace ns = "urn:ietf:params:xml:ns:xmpp-sasl";
     var element = new XElement(ns + "auth");

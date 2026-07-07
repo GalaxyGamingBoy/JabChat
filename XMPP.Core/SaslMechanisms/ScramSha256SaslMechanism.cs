@@ -10,7 +10,7 @@ public class ScramSha256SaslMechanism : ISaslMechanism
   public int Priority => 100;
 
   private IXmppClient _client = null!;
-  private XmppCreds _credentials = null!;
+  private XmppCredentials _credentials = null!;
   private string _nonce = string.Empty;
 
   private string _clientFirstBare = string.Empty;
@@ -126,7 +126,7 @@ public class ScramSha256SaslMechanism : ISaslMechanism
   }
 
 
-  public async Task Use(XmppCreds credentials)
+  public async Task Use(XmppCredentials credentials)
   {
     _nonce = Guid.NewGuid().ToString();
     _credentials = credentials;
@@ -134,8 +134,7 @@ public class ScramSha256SaslMechanism : ISaslMechanism
     _client.RegisterUnexpectedStanza<ScramChallenge>(OnChallengerReceived);
     _client.RegisterUnexpectedStanza<SaslSuccess>(OnSuccessReceived);
     
-    var localpart = credentials.Jid.Split("@")[0];
-    _clientFirstBare = $"n={localpart},r={_nonce}";
+    _clientFirstBare = $"n={credentials.Jid.LocalPart},r={_nonce}";
     var message = $"n,,{_clientFirstBare}";
     
     XNamespace ns = "urn:ietf:params:xml:ns:xmpp-sasl";

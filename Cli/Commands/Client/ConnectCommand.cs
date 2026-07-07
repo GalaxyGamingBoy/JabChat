@@ -1,8 +1,6 @@
 using System.CommandLine;
-using System.Globalization;
 using Spectre.Console;
 using XMPP.Core;
-using XMPP.Core.Address;
 
 namespace Cli.Commands.Client;
 
@@ -14,9 +12,9 @@ public class ConnectCommand : Command
     Arity = ArgumentArity.ExactlyOne
   };
 
-  private readonly Argument<string> _jid = new("jid")
+  private readonly Argument<string> _username = new("username")
   {
-    Description = "The JID to use",
+    Description = "The username to use",
     Arity = ArgumentArity.ExactlyOne
   };
 
@@ -26,24 +24,34 @@ public class ConnectCommand : Command
     Arity = ArgumentArity.ExactlyOne
   };
 
+  private readonly Argument<string> _resource = new("--resource")
+  {
+    Description = "The resource to use",
+    DefaultValueFactory = (_) => Guid.NewGuid().ToString(),
+    Arity = ArgumentArity.ZeroOrOne
+  };
+
   private readonly Option<XmppBackend> _backend = new("--backend")
   {
     Description = "The XMPP backend to use",
-    DefaultValueFactory = (_) => XmppBackend.Tcp
+    DefaultValueFactory = (_) => XmppBackend.Tcp,
+    Arity = ArgumentArity.ZeroOrOne
   };
 
   private async Task CommandAction(ParseResult result)
   {
     var host = result.GetRequiredValue(_host);
     var backend = result.GetRequiredValue(_backend);
-    var jid = result.GetRequiredValue(_jid);
+    var username = result.GetRequiredValue(_username);
     var password = result.GetRequiredValue(_password);
+    var resource = result.GetRequiredValue(_resource);
 
     var client = await new XmppClientBuilder()
       .UseHost(host)
       .UseBackend(backend)
-      .UseJid(jid)
+      .UseUsername(username)
       .UsePassword(password)
+      .UseResourceForBinding(resource)
       .BuildAsync();
 
     if (client.IsFailed)
@@ -55,7 +63,7 @@ public class ConnectCommand : Command
       return;
     }
 
-    client.Value.ClientErrorRaisedAsync += (sender, err) =>
+    client.Value.ClientErrorRaisedAsync += (_, err) =>
     {
       AnsiConsole.MarkupLine($"[bold red]ERR: {err.Error.What()}[/]");
     };
@@ -68,11 +76,11 @@ public class ConnectCommand : Command
 
   public ConnectCommand() : base("connect", "Connects to the XMPP host")
   {
-    base.Add(_host);
-    base.Add(_jid);
-    base.Add(_password);
-    base.Add(_backend);
-    
-    base.SetAction(CommandAction);
+    Add(_host);
+    Add(_username);
+    Add(_password);
+    Add(_resource);
+    Add(_backend);
+    SetAction(CommandAction);
   }
 }
