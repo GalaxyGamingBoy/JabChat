@@ -16,7 +16,7 @@ public class PlainSaslMechanism : ISaslMechanism
     _client = client;
   }
   
-  private async void OnSuccessReceived(object sender, object? successMessageReceived)
+  private async Task OnSuccessReceived(object sender, object? successMessageReceived)
   {
     await _client.StopBackgroundService();
     await _client.SaslCompleted();

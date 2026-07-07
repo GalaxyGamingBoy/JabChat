@@ -39,7 +39,7 @@ public class TcpXmppBackend(bool forceTls) : IXmppClientBackend
     xmppClient.ReadLock.Release();
   }
 
-  private async void OnStartTlsProceed(object sender, object? stanza)
+  private async Task OnStartTlsProceed(object sender, object? stanza)
   {
     Console.WriteLine("Server confirmed TLS upgrade, proceeding...");
     await UpgradeSslStream((IXmppClient) sender);
@@ -48,9 +48,10 @@ public class TcpXmppBackend(bool forceTls) : IXmppClientBackend
     Console.WriteLine("TLS upgrade complete");
   }
 
-  private void OnStartTlsFailure(object sender, object? stanza)
+  private Task OnStartTlsFailure(object sender, object? stanza)
   {
     Console.WriteLine("Server rejected TLS upgrade");
+    return Task.CompletedTask;
   }
 
   public void UseClient(IXmppClient client)

@@ -34,7 +34,8 @@ public interface IXmppClient
   /// <typeparam name="T">Feature Object</typeparam>
   public Result RegisterFeature<T>();
 
-  public Result RegisterUnexpectedStanza<T>(Action<object, object?> func);
+  public Result RegisterUnexpectedStanza<T>(Func<object, object?, Task> func);
+
 
   public Result RegisterStreamError<T>() where T : IStreamError;
 

@@ -50,7 +50,7 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
 
   private Dictionary<string, XmlSerializer> FeatureSerializers { get; } = new();
   private Dictionary<string, XmlSerializer> ErrorSerializers { get; } = new();
-  private Dictionary<string, (XmlSerializer, Action<object, object?>)> UnexpectedStanzaSerializers { get; } = new();
+  private Dictionary<string, (XmlSerializer, Func<object, object?, Task>)> UnexpectedStanzaSerializers { get; } = new();
   private SortedList<int, ISaslMechanism> SaslHandlers { get; } = new();
 
   private CancellationTokenSource _cts = new();
@@ -309,7 +309,7 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
     SaslHandlers[mech.Priority] = mech;
   }
 
-  public Result RegisterUnexpectedStanza<T>(Action<object, object?> func)
+  public Result RegisterUnexpectedStanza<T>(Func<object, object?, Task> func)
   {
     var attr = (XmlRootAttribute?)Attribute.GetCustomAttribute(
       typeof(T), typeof(XmlRootAttribute));

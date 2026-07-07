@@ -58,7 +58,7 @@ public class ScramSha1SaslMechanism : ISaslMechanism
   
   private byte[] Hash(byte[] val) => SHA1.HashData(val);
 
-  private async void OnChallengerReceived(object sender, object? challengeMessageReceived)
+  private async Task OnChallengerReceived(object sender, object? challengeMessageReceived)
   {
     var challengeMessage = (ScramChallenge)challengeMessageReceived!;
     var deserializedBytes = Convert.FromBase64String(challengeMessage.Body);
@@ -108,7 +108,7 @@ public class ScramSha1SaslMechanism : ISaslMechanism
     _client.ReadLock.Release();
   }
 
-  private async void OnSuccessReceived(object sender, object? successMessageReceived)
+  private async Task OnSuccessReceived(object sender, object? successMessageReceived)
   {
     var successMessage = (SaslSuccess)successMessageReceived!;
     var messageBytes = Convert.FromBase64String(successMessage.Body);
