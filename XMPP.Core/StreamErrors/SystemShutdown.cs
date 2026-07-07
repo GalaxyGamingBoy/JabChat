@@ -6,7 +6,7 @@ namespace XMPP.Core.StreamErrors;
 /// https://datatracker.ietf.org/doc/html/rfc6120#section-4.9.3.20
 /// </summary>
 [XmlRoot("system-shutdown", Namespace = "urn:ietf:params:xml:ns:xmpp-streams")]
-public class SystemShutdown : IStreamError
+public class SystemShutdown : IClientError
 {
   public string What()
   {

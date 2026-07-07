@@ -5,5 +5,5 @@ namespace XMPP.Core;
 
 public class StreamErrorEventArgs : EventArgs
 {
-  public IStreamError Error { get; init; }
+  public IClientError Error { get; init; }
 }

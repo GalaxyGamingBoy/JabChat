@@ -1,7 +1,5 @@
 using System.Net.Security;
 using System.Net.Sockets;
-using System.Security.Authentication;
-using System.Security.Cryptography.X509Certificates;
 using FluentResults;
 using XMPP.Core.Address;
 
@@ -50,7 +48,9 @@ public class TcpXmppBackend(bool forceTls) : IXmppClientBackend
 
   private Task OnStartTlsFailure(object sender, object? stanza)
   {
+    var client = (IXmppClient) sender;
     Console.WriteLine("Server rejected TLS upgrade");
+    client.InvokeClientError(new StartTls.Failure());
     return Task.CompletedTask;
   }
 
@@ -62,10 +62,11 @@ public class TcpXmppBackend(bool forceTls) : IXmppClientBackend
 
   public async void OnStreamFeatureRequested(object? sender, StreamFeatureRequestedEventArgs eventArgs)
   {
+    var client = (IXmppClient) sender!;
     if (eventArgs.Feature is Features.StartTlsFeature || (SslStream is null && forceTls))
     {
       Console.WriteLine("Attempting to upgrade session to TLS");
-      await ((IXmppClient)sender!).SendStanzaAsync(new StartTls.Command());
+      await client.SendStanzaAsync(new StartTls.Command());
     }
   }
 

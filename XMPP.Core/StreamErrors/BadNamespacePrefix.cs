@@ -6,7 +6,7 @@ namespace XMPP.Core.StreamErrors;
 /// https://datatracker.ietf.org/doc/html/rfc6120#section-4.9.3.2
 /// </summary>
 [XmlRoot("bad-namespace-prefix", Namespace = "urn:ietf:params:xml:ns:xmpp-streams")]
-public class BadNamespacePrefix : IStreamError
+public class BadNamespacePrefix : IClientError
 {
   public string What()
   {

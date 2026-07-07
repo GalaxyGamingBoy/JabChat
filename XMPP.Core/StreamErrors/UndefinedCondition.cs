@@ -6,7 +6,7 @@ namespace XMPP.Core.StreamErrors;
 /// https://datatracker.ietf.org/doc/html/rfc6120#section-4.9.3.21
 /// </summary>
 [XmlRoot("undefined-condition", Namespace = "urn:ietf:params:xml:ns:xmpp-streams")]
-public class UndefinedCondition : IStreamError
+public class UndefinedCondition : IClientError
 {
   public string What()
   {

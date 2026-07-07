@@ -76,8 +76,7 @@ public class ScramSha1SaslMechanism : ISaslMechanism
 
     if (!challengeNonce.StartsWith(_nonce))
     {
-      // todo: throw err
-      Console.WriteLine($"Aborting {Mechanism}, challenge nonce mismatch.");
+      _client.InvokeClientError(new ChallengeNonceMismatch(Mechanism));
       return;
     }
 
@@ -116,8 +115,7 @@ public class ScramSha1SaslMechanism : ISaslMechanism
 
     if (message != $"v={_serverSignature}")
     {
-      // todo: throw err
-      Console.WriteLine($"Aborting {Mechanism}, server signature mismatch.");
+      _client.InvokeClientError(new ServerSignatureMismatch(Mechanism));
       return;
     }
 

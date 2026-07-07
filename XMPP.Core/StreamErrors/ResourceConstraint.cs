@@ -6,7 +6,7 @@ namespace XMPP.Core.StreamErrors;
 /// https://datatracker.ietf.org/doc/html/rfc6120#section-4.9.3.17
 /// </summary>
 [XmlRoot("resource-constraint", Namespace = "urn:ietf:params:xml:ns:xmpp-streams")]
-public class ResourceConstraint : IStreamError
+public class ResourceConstraint : IClientError
 {
   public string What()
   {

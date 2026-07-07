@@ -62,7 +62,10 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
 
   private CancellationTokenSource _cts = new();
   private Task? BackgroundServiceHandler { get; set; }
-  
+
+  public void InvokeClientError(IClientError error) =>
+    ClientErrorRaisedAsync?.Invoke(this, new StreamErrorEventArgs() {Error = error});
+
   public SemaphoreSlim ReadLock { get; } = new(1, 1);
   private SemaphoreSlim WriteLock { get; } = new(1, 1);
 
@@ -86,31 +89,31 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
     RegisterFeature<SaslFeature>();
     RegisterFeature<BindFeature>();
 
-    RegisterStreamError<BadFormat>();
-    RegisterStreamError<BadNamespacePrefix>();
-    RegisterStreamError<Conflict>();
-    RegisterStreamError<ConnectionTimeout>();
-    RegisterStreamError<HostGone>();
-    RegisterStreamError<HostUnknown>();
-    RegisterStreamError<ImproperAddressing>();
-    RegisterStreamError<InternalServerError>();
-    RegisterStreamError<InvalidFrom>();
-    RegisterStreamError<InvalidNamespace>();
-    RegisterStreamError<InvalidXml>();
-    RegisterStreamError<NotAuthorized>();
-    RegisterStreamError<NotWellFormed>();
-    RegisterStreamError<PolicyViolation>();
-    RegisterStreamError<RemoteConnectionFailed>();
-    RegisterStreamError<Reset>();
-    RegisterStreamError<ResourceConstraint>();
-    RegisterStreamError<RestrictedXml>();
-    RegisterStreamError<SeeOtherHost>();
-    RegisterStreamError<SystemShutdown>();
-    RegisterStreamError<UndefinedCondition>();
-    RegisterStreamError<UnsupportedEncoding>();
-    RegisterStreamError<UnsupportedFeature>();
-    RegisterStreamError<UnsupportedStanzaType>();
-    RegisterStreamError<UnsupportedVersion>();
+    RegisterClientError<BadFormat>();
+    RegisterClientError<BadNamespacePrefix>();
+    RegisterClientError<Conflict>();
+    RegisterClientError<ConnectionTimeout>();
+    RegisterClientError<HostGone>();
+    RegisterClientError<HostUnknown>();
+    RegisterClientError<ImproperAddressing>();
+    RegisterClientError<InternalServerError>();
+    RegisterClientError<InvalidFrom>();
+    RegisterClientError<InvalidNamespace>();
+    RegisterClientError<InvalidXml>();
+    RegisterClientError<NotAuthorized>();
+    RegisterClientError<NotWellFormed>();
+    RegisterClientError<PolicyViolation>();
+    RegisterClientError<RemoteConnectionFailed>();
+    RegisterClientError<Reset>();
+    RegisterClientError<ResourceConstraint>();
+    RegisterClientError<RestrictedXml>();
+    RegisterClientError<SeeOtherHost>();
+    RegisterClientError<SystemShutdown>();
+    RegisterClientError<UndefinedCondition>();
+    RegisterClientError<UnsupportedEncoding>();
+    RegisterClientError<UnsupportedFeature>();
+    RegisterClientError<UnsupportedStanzaType>();
+    RegisterClientError<UnsupportedVersion>();
     
     RegisterSaslMechanism<PlainSaslMechanism>();
     RegisterSaslMechanism<ScramSha1SaslMechanism>();
@@ -124,7 +127,7 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
     StreamFeatureRequestedAsync += SaslHandler;
     StreamFeatureRequestedAsync += BindHandler;
 
-    StreamErrorRaisedAsync += OnStreamError;
+    ClientErrorRaisedAsync += OnStreamError;
   }
 
   public async ValueTask DisposeAsync()
@@ -382,7 +385,7 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
     return Result.Ok();
   }
 
-  public Result RegisterStreamError<T>() where T : IStreamError
+  public Result RegisterClientError<T>() where T : IClientError
   {
     var attr = (XmlRootAttribute?)Attribute.GetCustomAttribute(
       typeof(T), typeof(XmlRootAttribute));
@@ -402,7 +405,7 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
   }
 
   public event EventHandler<StreamFeatureRequestedEventArgs>? StreamFeatureRequestedAsync;
-  public event EventHandler<StreamErrorEventArgs>? StreamErrorRaisedAsync;
+  public event EventHandler<StreamErrorEventArgs>? ClientErrorRaisedAsync;
 
   public async Task SaslCompleted()
   {
@@ -469,7 +472,7 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
         ErrorSerializers.TryGetValue($"{sub.NamespaceURI}/{sub.Name}", out var errorSerializer);
         var error = errorSerializer?.Deserialize(sub);
         if (error != null)
-          StreamErrorRaisedAsync?.Invoke(this, new StreamErrorEventArgs() { Error = (IStreamError)error });
+          ClientErrorRaisedAsync?.Invoke(this, new StreamErrorEventArgs() { Error = (IClientError)error });
         
         ReadLock.Release();
         break;

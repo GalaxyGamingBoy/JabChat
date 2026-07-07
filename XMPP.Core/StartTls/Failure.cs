@@ -4,7 +4,7 @@ using XMPP.Core.StreamErrors;
 namespace XMPP.Core.StartTls;
 
 [XmlRoot("failure", Namespace = "urn:ietf:params:xml:ns:xmpp-tls")]
-public class Failure : IStreamError
+public class Failure : IClientError
 {
   public string What()
   {

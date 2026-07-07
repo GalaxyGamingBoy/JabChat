@@ -55,7 +55,7 @@ public class ConnectCommand : Command
       return;
     }
 
-    client.Value.StreamErrorRaisedAsync += (sender, err) =>
+    client.Value.ClientErrorRaisedAsync += (sender, err) =>
     {
       AnsiConsole.MarkupLine($"[bold red]ERR: {err.Error.What()}[/]");
     };

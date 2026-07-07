@@ -40,20 +40,22 @@ public interface IXmppClient
   public Result RegisterUnexpectedStanza<T>(Func<object, object?, Task> func);
 
 
-  public Result RegisterStreamError<T>() where T : IStreamError;
+  public Result RegisterClientError<T>() where T : IClientError;
 
   public void RegisterSaslMechanism<T>() where T : ISaslMechanism, new();
 
   public Task<Result> OpenXmppStream();
   
   event EventHandler<StreamFeatureRequestedEventArgs>? StreamFeatureRequestedAsync;
-  event EventHandler<StreamErrorEventArgs>? StreamErrorRaisedAsync;
+  event EventHandler<StreamErrorEventArgs>? ClientErrorRaisedAsync;
   
   public Task SaslCompleted();
 
   public void StartBackgroundService();
   public Task StopBackgroundService();
 
+  public void InvokeClientError(IClientError error);
+  
   /// <summary>
   /// Manages the ReadLock of the backend service, usually there is no need to touch (exceptions exist)
   ///
