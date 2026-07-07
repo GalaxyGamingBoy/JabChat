@@ -114,6 +114,18 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
     RegisterClientError<UnsupportedFeature>();
     RegisterClientError<UnsupportedStanzaType>();
     RegisterClientError<UnsupportedVersion>();
+
+    RegisterClientError<SaslErrors.Aborted>();
+    RegisterClientError<SaslErrors.AccountDisabled>();
+    RegisterClientError<SaslErrors.CredentialsExpired>();
+    RegisterClientError<SaslErrors.EncryptionRequired>();
+    RegisterClientError<SaslErrors.IncorrectEncoding>();
+    RegisterClientError<SaslErrors.InvalidAuthZid>();
+    RegisterClientError<SaslErrors.InvalidMechanism>();
+    RegisterClientError<SaslErrors.MalformedRequest>();
+    RegisterClientError<SaslErrors.MechanismTooWeak>();
+    RegisterClientError<SaslErrors.NotAuthorized>();
+    RegisterClientError<SaslErrors.TemporaryAuthFailure>();
     
     RegisterSaslMechanism<PlainSaslMechanism>();
     RegisterSaslMechanism<ScramSha1SaslMechanism>();
@@ -474,7 +486,20 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
         if (error != null)
           ClientErrorRaisedAsync?.Invoke(this, new StreamErrorEventArgs() { Error = (IClientError)error });
         
-        ReadLock.Release();
+        break;
+      }
+
+      if (reader is { Name: "failure", NamespaceURI: "urn:ietf:params:xml:ns:xmpp-sasl" })
+      {
+        using var sub = reader.ReadSubtree();
+        await sub.ReadAsync();
+        await sub.ReadAsync();
+        
+        ErrorSerializers.TryGetValue($"{sub.NamespaceURI}/{sub.Name}", out var errorSerializer);
+        var error = errorSerializer?.Deserialize(sub);
+        if (error != null)
+          ClientErrorRaisedAsync?.Invoke(this, new StreamErrorEventArgs() { Error = (IClientError)error });
+        
         break;
       }
 
