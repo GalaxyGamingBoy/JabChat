@@ -1,6 +1,8 @@
 using System.Security.Cryptography;
 using System.Xml.Linq;
 using XMPP.Core.Address;
+using XMPP.Core.ClientErrors;
+using XMPP.Core.SaslErrors;
 
 namespace XMPP.Core.SaslMechanisms;
 

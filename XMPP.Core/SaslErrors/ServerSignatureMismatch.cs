@@ -1,4 +1,6 @@
-namespace XMPP.Core.SaslMechanisms;
+using XMPP.Core.ClientErrors;
+
+namespace XMPP.Core.SaslErrors;
 
 public record ServerSignatureMismatch(string Mechanism) : IClientError
 {

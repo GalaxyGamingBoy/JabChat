@@ -1,4 +1,4 @@
-namespace XMPP.Core;
+namespace XMPP.Core.ClientErrors;
 
 public interface IClientError
 {

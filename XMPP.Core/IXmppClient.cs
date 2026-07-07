@@ -1,6 +1,7 @@
 using System.Xml;
 using System.Xml.Linq;
 using FluentResults;
+using XMPP.Core.ClientErrors;
 using XMPP.Core.InfoQueries;
 using XMPP.Core.SaslMechanisms;
 using XMPP.Core.StreamErrors;

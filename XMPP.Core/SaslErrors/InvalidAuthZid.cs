@@ -1,4 +1,5 @@
 using System.Xml.Serialization;
+using XMPP.Core.ClientErrors;
 
 namespace XMPP.Core.SaslErrors;
 

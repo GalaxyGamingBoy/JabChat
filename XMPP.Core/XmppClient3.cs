@@ -5,6 +5,7 @@ using System.Xml.Serialization;
 using FluentResults;
 using XMPP.Core.Address;
 using XMPP.Core.Backend;
+using XMPP.Core.ClientErrors;
 using XMPP.Core.Features;
 using XMPP.Core.InfoQueries;
 using XMPP.Core.SaslMechanisms;
@@ -221,8 +222,7 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
     var result = await SendInfoQueryAsync(query);
     if (result.IsFailed)
     {
-      // todo: throw err
-      Console.WriteLine($"Failed to bind to resource {Credentials.Jid.Resource}");
+      InvokeClientError(new BindError(Credentials.Jid.Resource, result.Errors[0].Message));
       return;
     }
     

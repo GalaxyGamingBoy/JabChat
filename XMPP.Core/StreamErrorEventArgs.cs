@@ -1,4 +1,5 @@
 using System.Net.Sockets;
+using XMPP.Core.ClientErrors;
 using XMPP.Core.StreamErrors;
 
 namespace XMPP.Core;
