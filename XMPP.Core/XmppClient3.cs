@@ -160,7 +160,7 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
     });
   }
 
-  private async Task OnStreamError(object? sender, StreamErrorEventArgs args)
+  private async void OnStreamError(object? sender, StreamErrorEventArgs args)
   {
     try
     {
@@ -172,7 +172,7 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
     }
   }
 
-  private async Task SaslHandler(object? sender, StreamFeatureRequestedEventArgs args)
+  private async void SaslHandler(object? sender, StreamFeatureRequestedEventArgs args)
   {
     if (args.Feature is not SaslFeature sasl)
       return;
@@ -190,7 +190,7 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
     }
   }
 
-  private async Task BindHandler(object? sender, StreamFeatureRequestedEventArgs args)
+  private async void BindHandler(object? sender, StreamFeatureRequestedEventArgs args)
   {
     if (args.Feature is not BindFeature)
       return;
@@ -401,8 +401,8 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
     return Result.Ok();
   }
 
-  public event AsyncEventHandler<StreamFeatureRequestedEventArgs>? StreamFeatureRequestedAsync;
-  public event AsyncEventHandler<StreamErrorEventArgs>? StreamErrorRaisedAsync;
+  public event EventHandler<StreamFeatureRequestedEventArgs>? StreamFeatureRequestedAsync;
+  public event EventHandler<StreamErrorEventArgs>? StreamErrorRaisedAsync;
 
   public async Task SaslCompleted()
   {

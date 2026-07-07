@@ -60,7 +60,7 @@ public class TcpXmppBackend(bool forceTls) : IXmppClientBackend
     client.RegisterUnexpectedStanza<StartTls.Failure>(OnStartTlsFailure);
   }
 
-  public async Task OnStreamFeatureRequested(object? sender, StreamFeatureRequestedEventArgs eventArgs)
+  public async void OnStreamFeatureRequested(object? sender, StreamFeatureRequestedEventArgs eventArgs)
   {
     if (eventArgs.Feature is Features.StartTlsFeature || (SslStream is null && forceTls))
     {

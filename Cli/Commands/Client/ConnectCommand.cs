@@ -58,7 +58,6 @@ public class ConnectCommand : Command
     client.Value.StreamErrorRaisedAsync += (sender, err) =>
     {
       AnsiConsole.MarkupLine($"[bold red]ERR: {err.Error.What()}[/]");
-      return Task.CompletedTask;
     };
     
     AnsiConsole.MarkupLine($"Connecting to [yellow]{host}[/]... (Press any key to exit)");
