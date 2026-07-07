@@ -6,7 +6,7 @@ namespace XMPP.Core.StreamErrors;
 /// https://datatracker.ietf.org/doc/html/rfc6120#section-4.9.3.9
 /// </summary>
 [XmlRoot("invalid-from", Namespace = "urn:ietf:params:xml:ns:xmpp-streams")]
-public class InvalidFrom : IClientError
+public record InvalidFrom : IClientError
 {
   public string What()
   {

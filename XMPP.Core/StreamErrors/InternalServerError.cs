@@ -6,7 +6,7 @@ namespace XMPP.Core.StreamErrors;
 /// https://datatracker.ietf.org/doc/html/rfc6120#section-4.9.3.8
 /// </summary>
 [XmlRoot("internal-server-error", Namespace = "urn:ietf:params:xml:ns:xmpp-streams")]
-public class InternalServerError : IClientError
+public record InternalServerError : IClientError
 {
   public string What()
   {

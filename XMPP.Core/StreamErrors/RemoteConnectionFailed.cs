@@ -6,7 +6,7 @@ namespace XMPP.Core.StreamErrors;
 /// https://datatracker.ietf.org/doc/html/rfc6120#section-4.9.3.15
 /// </summary>
 [XmlRoot("remote-connection-failed", Namespace = "urn:ietf:params:xml:ns:xmpp-streams")]
-public class RemoteConnectionFailed : IClientError
+public record RemoteConnectionFailed : IClientError
 {
   public string What()
   {

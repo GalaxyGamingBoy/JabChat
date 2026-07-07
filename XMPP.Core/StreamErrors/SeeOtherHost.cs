@@ -6,7 +6,7 @@ namespace XMPP.Core.StreamErrors;
 /// https://datatracker.ietf.org/doc/html/rfc6120#section-4.9.3.19
 /// </summary>
 [XmlRoot("see-other-host", Namespace = "urn:ietf:params:xml:ns:xmpp-streams")]
-public class SeeOtherHost : IClientError
+public record SeeOtherHost : IClientError
 {
   public string What()
   {
