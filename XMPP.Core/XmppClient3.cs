@@ -6,6 +6,7 @@ using FluentResults;
 using XMPP.Core.Address;
 using XMPP.Core.Backend;
 using XMPP.Core.Features;
+using XMPP.Core.InfoQueries;
 using XMPP.Core.SaslMechanisms;
 using XMPP.Core.StreamErrors;
 
@@ -41,6 +42,10 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
 
   public required XmppAddress Address { get; init; }
   public required XmppCreds Credentials { get; init; }
+  public required string PreferredResource { get; init; }
+  
+  public string FullJid { get; set; } = string.Empty;
+  
   public IXmppClientBackend Backend { get; init; }
 
   public State XmppState { get; private set; } = State.Disconnected;
@@ -52,6 +57,8 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
   private Dictionary<string, XmlSerializer> ErrorSerializers { get; } = new();
   private Dictionary<string, (XmlSerializer, Func<object, object?, Task>)> UnexpectedStanzaSerializers { get; } = new();
   private SortedList<int, ISaslMechanism> SaslHandlers { get; } = new();
+  
+  private Dictionary<string, TaskCompletionSource<InfoQuery>> InfoQueries { get; } = new();
 
   private CancellationTokenSource _cts = new();
   private Task? BackgroundServiceHandler { get; set; }
@@ -115,6 +122,7 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
     StreamFeatureRequestedAsync += Backend.OnStreamFeatureRequested;
     
     StreamFeatureRequestedAsync += SaslHandler;
+    StreamFeatureRequestedAsync += BindHandler;
 
     StreamErrorRaisedAsync += OnStreamError;
   }
@@ -180,6 +188,35 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
       await mechanism.Value.Use(Credentials);
       break;
     }
+  }
+
+  private async Task BindHandler(object? sender, StreamFeatureRequestedEventArgs args)
+  {
+    if (args.Feature is not BindFeature)
+      return;
+    
+    Console.WriteLine($"Binding to resource {PreferredResource}");
+    var query = new InfoQuery()
+    {
+      Type = InfoQueryType.Set,
+      ResourceBind = new InfoQuery.Bind()
+      {
+        Resource = PreferredResource,
+      }
+    };
+    
+    var result = await SendInfoQueryAsync(query);
+    if (result.IsFailed)
+    {
+      // todo: throw err
+      Console.WriteLine($"Failed to bind to resource {PreferredResource}");
+      return;
+    }
+    
+    FullJid = result.Value.ResourceBind!.Jid!;
+    Console.WriteLine($"XMPP Client Connected to JID {FullJid}");
+    
+    XmppState = State.Connected;
   }
 
   public async Task<Result> OpenXmppStream()
@@ -287,6 +324,23 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
     return Result.Ok();
   }
 
+  public async Task<Result<InfoQuery>> SendInfoQueryAsync(InfoQuery query)
+  {
+    var id = Guid.CreateVersion7().ToString();
+    query.Id ??= id;
+    
+    var tcs = new TaskCompletionSource<InfoQuery>();
+    InfoQueries[id] = tcs;
+    
+    if (await SendStanzaAsync(query) is  { IsFailed: true } r)
+      return r;
+    
+    var result = await tcs.Task;
+    if (result.Type == InfoQueryType.Error)
+      return Result.Fail(result.ToString());
+    return Result.Ok(result);
+  }
+
   public Result RegisterFeature<T>()
   {
     var attr = (XmlRootAttribute?)Attribute.GetCustomAttribute(
@@ -376,6 +430,8 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
       Async = true, IgnoreProcessingInstructions = true, IgnoreWhitespace = true, IgnoreComments = true,
       CloseInput = false
     });
+    
+    var infoQuerySerializer = new XmlSerializer(typeof(InfoQuery));
 
     while (!_cts.IsCancellationRequested)
     {
@@ -438,10 +494,18 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
         continue;
       }
 
-      if (reader.Name == "failure")
+      if (reader.Name == "iq")
       {
-        Console.WriteLine("ERR");
-        Console.WriteLine(reader.HasValue);
+        using var sub = reader.ReadSubtree();
+        var infoQuery = (InfoQuery?) infoQuerySerializer.Deserialize(sub);
+        if (infoQuery != null)
+        {
+          InfoQueries.TryGetValue(infoQuery.Id!, out var infoQueryTaskSource);
+          infoQueryTaskSource?.TrySetResult(infoQuery);
+        }
+        
+        ReadLock.Release();
+        continue;
       }
 
       {

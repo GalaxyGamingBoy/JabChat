@@ -1,6 +1,7 @@
 using System.Xml;
 using System.Xml.Linq;
 using FluentResults;
+using XMPP.Core.InfoQueries;
 using XMPP.Core.SaslMechanisms;
 using XMPP.Core.StreamErrors;
 
@@ -27,6 +28,8 @@ public interface IXmppClient
 
   public Task<Result> SendStanzaAsync(object element);
   public Task<Result> SendStanzaAsync(XElement element);
+  
+  public Task<Result<InfoQuery>> SendInfoQueryAsync(InfoQuery query);
 
   /// <summary>
   /// Registers a XMPP stream feature for deserialization

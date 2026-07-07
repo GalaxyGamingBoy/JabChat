@@ -13,6 +13,7 @@ public class XmppClientBuilder
   private string? _jid = null;
   private string? _password = null;
   private bool _forceTls = false;
+  private string _resource = Guid.NewGuid().ToString();
   
   private XmppAddressProvider _addressProvider = new XmppAddressProvider();
 
@@ -58,6 +59,12 @@ public class XmppClientBuilder
     return this;
   }
 
+  public XmppClientBuilder UseResourceForBinding(string resource)
+  {
+    this._resource = resource;
+    return this;
+  }
+
   public XmppClientBuilder ForceTls()
   {
     this._forceTls = true;
@@ -89,6 +96,7 @@ public class XmppClientBuilder
     {
       Credentials = new XmppCreds(_jid, _password),
       Address = _address,
+      PreferredResource = _resource,
     };
   }
 
