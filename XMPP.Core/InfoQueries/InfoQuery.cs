@@ -1,4 +1,6 @@
 using System.Xml.Serialization;
+using XMPP.Core.ClientErrors;
+using XMPP.Core.StanzaErrors;
 
 namespace XMPP.Core.InfoQueries;
 
@@ -9,17 +11,11 @@ public record InfoQuery
   public string? Id { get; set; }
   
   [XmlAttribute("type")]
-  public required InfoQueryType Type { get; set; }
+  public required InfoQueryType Type { get; init; }
+  
+  [XmlElement("error")]
+  public StanzaError? StanzaError { get; init; }
   
   [XmlElement("bind", Namespace = "urn:ietf:params:xml:ns:xmpp-bind")]
-  public Bind? ResourceBind { get; set; }
-
-  public record Bind
-  {
-    [XmlElement("resource")]
-    public required string Resource { get; set; }
-    
-    [XmlElement("jid")]
-    public string? Jid { get; set; }
-  }
+  public Bind? ResourceBind { get; init; }
 }

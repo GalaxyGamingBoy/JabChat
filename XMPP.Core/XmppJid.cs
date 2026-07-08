@@ -4,10 +4,11 @@ public record XmppJid
 {
   public required string LocalPart;
   public required string DomainPart;
-  public required string Resource;
+  public string? Resource;
 
   public override string ToString()
   {
-    return $"{LocalPart}@{DomainPart}/{Resource}";
+    return Resource is not null
+      ? $"{LocalPart}@{DomainPart}/{Resource}" : $"{LocalPart}@{DomainPart}";
   }
 }

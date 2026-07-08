@@ -84,10 +84,12 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
 
   public XmppClient3(IXmppClientBackend backend)
   {
+    // Stream Features
     RegisterFeature<StartTlsFeature>();
     RegisterFeature<SaslFeature>();
     RegisterFeature<BindFeature>();
 
+    // Errors - StreamErrors
     RegisterClientError<StreamErrors.BadFormat>();
     RegisterClientError<StreamErrors.BadNamespacePrefix>();
     RegisterClientError<StreamErrors.Conflict>();
@@ -114,6 +116,7 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
     RegisterClientError<StreamErrors.UnsupportedStanzaType>();
     RegisterClientError<StreamErrors.UnsupportedVersion>();
 
+    // Errors - SaslErrors
     RegisterClientError<SaslErrors.Aborted>();
     RegisterClientError<SaslErrors.AccountDisabled>();
     RegisterClientError<SaslErrors.CredentialsExpired>();
@@ -126,18 +129,44 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
     RegisterClientError<SaslErrors.NotAuthorized>();
     RegisterClientError<SaslErrors.TemporaryAuthFailure>();
     
+    // Errors - StanzaErrors
+    RegisterClientError<StanzaErrors.BadRequest>();
+    RegisterClientError<StanzaErrors.Conflict>();
+    RegisterClientError<StanzaErrors.FeatureNotImplemented>();
+    RegisterClientError<StanzaErrors.Forbidden>();
+    RegisterClientError<StanzaErrors.Gone>();
+    RegisterClientError<StanzaErrors.InternalServerError>();
+    RegisterClientError<StanzaErrors.ItemNotFound>();
+    RegisterClientError<StanzaErrors.JidMalformed>();
+    RegisterClientError<StanzaErrors.NotAcceptable>();
+    RegisterClientError<StanzaErrors.NotAllowed>();
+    RegisterClientError<StanzaErrors.NotAuthorized>();
+    RegisterClientError<StanzaErrors.PolicyViolation>();
+    RegisterClientError<StanzaErrors.RecipientUnavailable>();
+    RegisterClientError<StanzaErrors.Redirect>();
+    RegisterClientError<StanzaErrors.RegistrationRequired>();
+    RegisterClientError<StanzaErrors.RemoteServerNotFound>();
+    RegisterClientError<StanzaErrors.RemoteServerTimeout>();
+    RegisterClientError<StanzaErrors.ResourceConstraint>();
+    RegisterClientError<StanzaErrors.ServiceUnavailable>();
+    RegisterClientError<StanzaErrors.SubscriptionRequired>();
+    RegisterClientError<StanzaErrors.UndefinedCondition>();
+    RegisterClientError<StanzaErrors.UnexpectedRequest>();
+    
+    // Sasl Mechanisms
     RegisterSaslMechanism<PlainSaslMechanism>();
     RegisterSaslMechanism<ScramSha1SaslMechanism>();
     RegisterSaslMechanism<ScramSha256SaslMechanism>();
 
+    // Backend Configuration
     Backend = backend;
     Backend.UseClient(this);
     Backend.NetworkStreamUpdated += OnUpdatedNetworkStream;
     StreamFeatureRequestedAsync += Backend.OnStreamFeatureRequested;
     
+    // Internal Handlers
     StreamFeatureRequestedAsync += SaslHandler;
     StreamFeatureRequestedAsync += BindHandler;
-
     ClientErrorRaisedAsync += OnStreamError;
   }
 
@@ -208,12 +237,15 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
   {
     if (args.Feature is not BindFeature)
       return;
+
+    if (Credentials.Jid.Resource is null)
+      Credentials.Jid.Resource = Guid.NewGuid().ToString();
     
     Console.WriteLine($"Binding to resource {Credentials.Jid.Resource}");
     var query = new InfoQuery()
     {
       Type = InfoQueryType.Set,
-      ResourceBind = new InfoQuery.Bind()
+      ResourceBind = new Bind()
       {
         Resource = Credentials.Jid.Resource,
       }
@@ -442,6 +474,20 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
     BackgroundServiceHandler = null;
   }
 
+  private List<IClientError> ParseStanzaErrors(List<XmlElement> errors)
+  {
+    var parsed =
+      errors.Select(element => {
+      ErrorSerializers.TryGetValue($"{element.NamespaceURI}/{element.Name}", out var errorSerializer);
+      using var reader = new XmlNodeReader(element);
+      return (IClientError?) errorSerializer?.Deserialize(reader);
+    }).Where(e => e != null).ToList();
+    
+#pragma warning disable CS8619 // Nullability of reference types in value doesn't match target type.
+    return (List<IClientError>) parsed;
+#pragma warning restore CS8619 // Nullability of reference types in value doesn't match target type.
+  }
+
   private async Task BackgroundService()
   {
     using var reader = XmlReader.Create(_stream!, new XmlReaderSettings
@@ -451,6 +497,7 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
     });
     
     var infoQuerySerializer = new XmlSerializer(typeof(InfoQuery));
+    var messageSerializer = new XmlSerializer(typeof(Message));
 
     while (!_cts.IsCancellationRequested)
     {
@@ -532,12 +579,34 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
         var infoQuery = (InfoQuery?) infoQuerySerializer.Deserialize(sub);
         if (infoQuery != null)
         {
+          if (infoQuery.StanzaError is not null)
+          {
+            var errors = ParseStanzaErrors(infoQuery.StanzaError.InternalErrors);
+            infoQuery.StanzaError.Errors = errors;
+          }
+          
           InfoQueries.TryGetValue(infoQuery.Id!, out var infoQueryTaskSource);
           infoQueryTaskSource?.TrySetResult(infoQuery);
         }
         
         ReadLock.Release();
         continue;
+      }
+
+      if (reader.Name == "message")
+      {
+        using var sub = reader.ReadSubtree();
+        var message = (Message?) messageSerializer.Deserialize(sub);
+        if (message != null)
+        {
+          if (message.StanzaError is not null)
+          {
+            var errors = ParseStanzaErrors(message.StanzaError.InternalErrors);
+            message.StanzaError.Errors = errors;
+          }
+          
+          // todo: on message event handler
+        }
       }
 
       {
