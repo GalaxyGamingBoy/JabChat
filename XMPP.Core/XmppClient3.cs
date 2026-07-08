@@ -63,7 +63,7 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
   private Task? BackgroundServiceHandler { get; set; }
 
   public void InvokeClientError(IClientError error) =>
-    ClientErrorRaisedAsync?.Invoke(this, new StreamErrorEventArgs() {Error = error});
+    ClientErrorRaised?.Invoke(this, new ClientErrorRaisedEventArgs() {Error = error});
 
   public SemaphoreSlim ReadLock { get; } = new(1, 1);
   private SemaphoreSlim WriteLock { get; } = new(1, 1);
@@ -162,12 +162,12 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
     Backend = backend;
     Backend.UseClient(this);
     Backend.NetworkStreamUpdated += OnUpdatedNetworkStream;
-    StreamFeatureRequestedAsync += Backend.OnStreamFeatureRequested;
+    StreamFeatureRequested += Backend.OnStreamFeatureRequested;
     
     // Internal Handlers
-    StreamFeatureRequestedAsync += SaslHandler;
-    StreamFeatureRequestedAsync += BindHandler;
-    ClientErrorRaisedAsync += OnStreamError;
+    StreamFeatureRequested += SaslHandler;
+    StreamFeatureRequested += BindHandler;
+    ClientErrorRaised += OnStreamError;
   }
 
   public async ValueTask DisposeAsync()
@@ -203,7 +203,7 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
     });
   }
 
-  private async void OnStreamError(object? sender, StreamErrorEventArgs args)
+  private async void OnStreamError(object? sender, ClientErrorRaisedEventArgs args)
   {
     try
     {
@@ -452,8 +452,9 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
     return Result.Ok();
   }
 
-  public event EventHandler<StreamFeatureRequestedEventArgs>? StreamFeatureRequestedAsync;
-  public event EventHandler<StreamErrorEventArgs>? ClientErrorRaisedAsync;
+  public event EventHandler<StreamFeatureRequestedEventArgs>? StreamFeatureRequested;
+  public event EventHandler<ClientErrorRaisedEventArgs>? ClientErrorRaised;
+  public event EventHandler<OnMessageReceivedEventArgs>? OnMessageReceived;
 
   public async Task SaslCompleted()
   {
@@ -535,7 +536,7 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
         ErrorSerializers.TryGetValue($"{sub.NamespaceURI}/{sub.Name}", out var errorSerializer);
         var error = errorSerializer?.Deserialize(sub);
         if (error != null)
-          ClientErrorRaisedAsync?.Invoke(this, new StreamErrorEventArgs() { Error = (IClientError)error });
+          ClientErrorRaised?.Invoke(this, new ClientErrorRaisedEventArgs() { Error = (IClientError)error });
         
         break;
       }
@@ -549,7 +550,7 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
         ErrorSerializers.TryGetValue($"{sub.NamespaceURI}/{sub.Name}", out var errorSerializer);
         var error = errorSerializer?.Deserialize(sub);
         if (error != null)
-          ClientErrorRaisedAsync?.Invoke(this, new StreamErrorEventArgs() { Error = (IClientError)error });
+          ClientErrorRaised?.Invoke(this, new ClientErrorRaisedEventArgs() { Error = (IClientError)error });
         
         break;
       }
@@ -566,7 +567,7 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
             FeatureSerializers.TryGetValue(sub.NamespaceURI, out var featureSerializer);
             var feature = featureSerializer?.Deserialize(sub);
             if (feature != null)
-              StreamFeatureRequestedAsync?.Invoke(this, new StreamFeatureRequestedEventArgs { Feature = feature });
+              StreamFeatureRequested?.Invoke(this, new StreamFeatureRequestedEventArgs { Feature = feature });
           }
 
         ReadLock.Release();
@@ -605,7 +606,7 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
             message.StanzaError.Errors = errors;
           }
           
-          // todo: on message event handler
+          OnMessageReceived?.Invoke(this, new OnMessageReceivedEventArgs { Message = message });
         }
       }
 

@@ -63,7 +63,7 @@ public class ConnectCommand : Command
       return;
     }
 
-    client.Value.ClientErrorRaisedAsync += (_, err) =>
+    client.Value.ClientErrorRaised += (_, err) =>
     {
       AnsiConsole.MarkupLine($"[bold red]ERR: {err.Error.What()}[/]");
     };

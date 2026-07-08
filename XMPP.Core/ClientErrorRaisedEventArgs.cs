@@ -4,7 +4,7 @@ using XMPP.Core.StreamErrors;
 
 namespace XMPP.Core;
 
-public class StreamErrorEventArgs : EventArgs
+public class ClientErrorRaisedEventArgs : EventArgs
 {
   public IClientError Error { get; init; }
 }

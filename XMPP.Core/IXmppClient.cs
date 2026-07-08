@@ -47,8 +47,9 @@ public interface IXmppClient
 
   public Task<Result> OpenXmppStream();
   
-  event EventHandler<StreamFeatureRequestedEventArgs>? StreamFeatureRequestedAsync;
-  event EventHandler<StreamErrorEventArgs>? ClientErrorRaisedAsync;
+  event EventHandler<StreamFeatureRequestedEventArgs>? StreamFeatureRequested;
+  event EventHandler<ClientErrorRaisedEventArgs>? ClientErrorRaised;
+  event EventHandler<OnMessageReceivedEventArgs>? OnMessageReceived;
   
   public Task SaslCompleted();
 
