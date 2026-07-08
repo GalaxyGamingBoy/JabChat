@@ -157,6 +157,9 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
     RegisterSaslMechanism<PlainSaslMechanism>();
     RegisterSaslMechanism<ScramSha1SaslMechanism>();
     RegisterSaslMechanism<ScramSha256SaslMechanism>();
+    RegisterSaslMechanism<ScramSha384SaslMechanism>();
+    RegisterSaslMechanism<ScramSha512SaslMechanism>();
+    RegisterSaslMechanism<ScramSha3512SaslMechanism>();
 
     // Backend Configuration
     Backend = backend;

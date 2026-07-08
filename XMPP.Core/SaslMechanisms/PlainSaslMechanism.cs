@@ -9,7 +9,7 @@ public class PlainSaslMechanism : ISaslMechanism
   private IXmppClient _client = null!;
   
   public string Mechanism => "PLAIN";
-  public int Priority => 500;
+  public int Priority => 600;
 
   public void BindClient(IXmppClient client)
   {
