@@ -48,7 +48,7 @@ public class TcpXmppBackend(bool forceTls) : IXmppClientBackend
     Console.WriteLine("Server confirmed TLS upgrade, proceeding...");
     await UpgradeSslStream((IXmppClient) sender);
       
-    await ((XmppClient3)sender).OpenXmppStream();
+    await ((XmppClient)sender).OpenXmppStream();
     Console.WriteLine("TLS upgrade complete");
   }
 

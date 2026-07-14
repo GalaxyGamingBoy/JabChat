@@ -101,7 +101,7 @@ public class XmppClientBuilder
       Resource = _resource
     };
 
-    return new XmppClient3(GetBackend())
+    return new XmppClient(GetBackend())
     {
       Credentials = new XmppCredentials(jid, _password),
       Address = _address,
