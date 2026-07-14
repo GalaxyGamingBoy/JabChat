@@ -42,9 +42,9 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
 
   public required XmppAddress Address { get; init; }
   public required XmppCredentials Credentials { get; init; }
-  
+
   public XmppJid? FullJid { get; set; }
-  
+
   public IXmppClientBackend Backend { get; init; }
 
   public State XmppState { get; private set; } = State.Disconnected;
@@ -56,14 +56,14 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
   private Dictionary<string, XmlSerializer> ErrorSerializers { get; } = new();
   private Dictionary<string, (XmlSerializer, Func<object, object?, Task>)> UnexpectedStanzaSerializers { get; } = new();
   private SortedList<int, ISaslMechanism> SaslHandlers { get; } = new();
-  
+
   private Dictionary<string, TaskCompletionSource<InfoQuery>> InfoQueries { get; } = new();
 
   private CancellationTokenSource _cts = new();
   private Task? BackgroundServiceHandler { get; set; }
 
   public void InvokeClientError(IClientError error) =>
-    ClientErrorRaised?.Invoke(this, new ClientErrorRaisedEventArgs() {Error = error});
+    ClientErrorRaised?.Invoke(this, new ClientErrorRaisedEventArgs() { Error = error });
 
   public SemaphoreSlim ReadLock { get; } = new(1, 1);
   private SemaphoreSlim WriteLock { get; } = new(1, 1);
@@ -128,7 +128,7 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
     RegisterClientError<SaslErrors.MechanismTooWeak>();
     RegisterClientError<SaslErrors.NotAuthorized>();
     RegisterClientError<SaslErrors.TemporaryAuthFailure>();
-    
+
     // Errors - StanzaErrors
     RegisterClientError<StanzaErrors.BadRequest>();
     RegisterClientError<StanzaErrors.Conflict>();
@@ -152,7 +152,7 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
     RegisterClientError<StanzaErrors.SubscriptionRequired>();
     RegisterClientError<StanzaErrors.UndefinedCondition>();
     RegisterClientError<StanzaErrors.UnexpectedRequest>();
-    
+
     // Sasl Mechanisms
     RegisterSaslMechanism<PlainSaslMechanism>();
     RegisterSaslMechanism<ScramSha1SaslMechanism>();
@@ -166,7 +166,7 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
     Backend.UseClient(this);
     Backend.NetworkStreamUpdated += OnUpdatedNetworkStream;
     StreamFeatureRequested += Backend.OnStreamFeatureRequested;
-    
+
     // Internal Handlers
     StreamFeatureRequested += SaslHandler;
     StreamFeatureRequested += BindHandler;
@@ -222,7 +222,7 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
   {
     if (args.Feature is not SaslFeature sasl)
       return;
-    
+
     Console.WriteLine("Supported SASL mechanisms:");
     sasl.Mechanisms.ForEach(Console.WriteLine);
 
@@ -243,7 +243,7 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
 
     if (Credentials.Jid.Resource is null)
       Credentials.Jid.Resource = Guid.NewGuid().ToString();
-    
+
     Console.WriteLine($"Binding to resource {Credentials.Jid.Resource}");
     var query = new InfoQuery()
     {
@@ -253,23 +253,23 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
         Resource = Credentials.Jid.Resource,
       }
     };
-    
+
     var result = await SendInfoQueryAsync(query);
     if (result.IsFailed)
     {
       InvokeClientError(new BindError(Credentials.Jid.Resource, result.Errors[0].Message));
       return;
     }
-    
+
     FullJid = new XmppJid()
     {
       LocalPart = Credentials.Jid.LocalPart,
       DomainPart = Credentials.Jid.DomainPart,
       Resource = Credentials.Jid.Resource,
     };
-    
+
     Console.WriteLine($"XMPP Client Connected to JID {FullJid}");
-    
+
     XmppState = State.Connected;
   }
 
@@ -277,10 +277,10 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
   {
     if (ValidateStreamValidState() is { IsFailed: true } r)
       return r;
-    
+
     await WriteLock.WaitAsync();
-    await _stream!.WriteAsync("<?xml version='1.0'?>"u8.ToArray());
-    await _stream.WriteAsync(Encoding.UTF8.GetBytes(
+    _stream!.Write("<?xml version='1.0'?>"u8.ToArray());
+    _stream.Write(Encoding.UTF8.GetBytes(
       $"<stream:stream from='{Credentials.Jid}' to='{Address.Host.TrimEnd(".")}' version='1.0' xml:lang='en' xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams'>\n"));
     await _stream.FlushAsync();
     WriteLock.Release();
@@ -293,7 +293,7 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
   {
     if (ValidateStreamValidState() is { IsFailed: true })
       return;
-    
+
     Console.WriteLine("Closing XMPP stream");
 
     await WriteLock.WaitAsync();
@@ -364,7 +364,7 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
 
     return Result.Ok();
   }
-  
+
   public async Task<Result> SendStanzaAsync(XElement element)
   {
     if (ValidateConnectionActiveState() is { IsFailed: true } r)
@@ -382,13 +382,13 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
   {
     var id = Guid.CreateVersion7().ToString();
     query.Id ??= id;
-    
+
     var tcs = new TaskCompletionSource<InfoQuery>();
     InfoQueries[id] = tcs;
-    
-    if (await SendStanzaAsync(query) is  { IsFailed: true } r)
+
+    if (await SendStanzaAsync(query) is { IsFailed: true } r)
       return r;
-    
+
     var result = await tcs.Task;
     if (result.Type == InfoQueryType.Error)
       return Result.Fail(result.ToString());
@@ -481,14 +481,15 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
   private List<IClientError> ParseStanzaErrors(List<XmlElement> errors)
   {
     var parsed =
-      errors.Select(element => {
-      ErrorSerializers.TryGetValue($"{element.NamespaceURI}/{element.Name}", out var errorSerializer);
-      using var reader = new XmlNodeReader(element);
-      return (IClientError?) errorSerializer?.Deserialize(reader);
-    }).Where(e => e != null).ToList();
-    
+      errors.Select(element =>
+      {
+        ErrorSerializers.TryGetValue($"{element.NamespaceURI}/{element.Name}", out var errorSerializer);
+        using var reader = new XmlNodeReader(element);
+        return (IClientError?)errorSerializer?.Deserialize(reader);
+      }).Where(e => e != null).ToList();
+
 #pragma warning disable CS8619 // Nullability of reference types in value doesn't match target type.
-    return (List<IClientError>) parsed;
+    return (List<IClientError>)parsed;
 #pragma warning restore CS8619 // Nullability of reference types in value doesn't match target type.
   }
 
@@ -499,133 +500,143 @@ public class XmppClient3 : IXmppClient, IAsyncDisposable
       Async = true, IgnoreProcessingInstructions = true, IgnoreWhitespace = true, IgnoreComments = true,
       CloseInput = false
     });
-    
+
     var infoQuerySerializer = new XmlSerializer(typeof(InfoQuery));
     var messageSerializer = new XmlSerializer(typeof(Message));
 
-    while (!_cts.IsCancellationRequested)
+    try
     {
-      // Await ReadLock approval
-      try
+
+      while (!_cts.IsCancellationRequested)
       {
-        await ReadLock.WaitAsync(_cts.Token);
-      }
-      catch (OperationCanceledException)
-      {
-        break;
-      }
-      
-      await reader.ReadAsync();
-      Console.WriteLine($"> {reader.Name}: {reader.NamespaceURI}");
-
-      if (reader.NodeType != XmlNodeType.Element)
-      {
-        ReadLock.Release();
-        continue;
-      }
-
-      if (reader.Name == "stream:stream")
-      {
-        ReadLock.Release();
-        continue;
-      }
-
-      if (reader.Name == "stream:error")
-      {
-        using var sub = reader.ReadSubtree();
-        await sub.ReadAsync();
-        await sub.ReadAsync();
-
-        ErrorSerializers.TryGetValue($"{sub.NamespaceURI}/{sub.Name}", out var errorSerializer);
-        var error = errorSerializer?.Deserialize(sub);
-        if (error != null)
-          ClientErrorRaised?.Invoke(this, new ClientErrorRaisedEventArgs() { Error = (IClientError)error });
-        
-        break;
-      }
-
-      if (reader is { Name: "failure", NamespaceURI: "urn:ietf:params:xml:ns:xmpp-sasl" })
-      {
-        using var sub = reader.ReadSubtree();
-        await sub.ReadAsync();
-        await sub.ReadAsync();
-        
-        ErrorSerializers.TryGetValue($"{sub.NamespaceURI}/{sub.Name}", out var errorSerializer);
-        var error = errorSerializer?.Deserialize(sub);
-        if (error != null)
-          ClientErrorRaised?.Invoke(this, new ClientErrorRaisedEventArgs() { Error = (IClientError)error });
-        
-        break;
-      }
-
-      if (reader.Name == "stream:features")
-      {
-        using var sub = reader.ReadSubtree();
-        await sub.ReadAsync();
-
-        while (await sub.ReadAsync())
-          if (sub is { NodeType: XmlNodeType.Element, Depth: 1 })
-          {
-            Console.WriteLine($"F> {sub.Name}: {sub.NamespaceURI}");
-            FeatureSerializers.TryGetValue(sub.NamespaceURI, out var featureSerializer);
-            var feature = featureSerializer?.Deserialize(sub);
-            if (feature != null)
-              StreamFeatureRequested?.Invoke(this, new StreamFeatureRequestedEventArgs { Feature = feature });
-          }
-
-        ReadLock.Release();
-        continue;
-      }
-
-      if (reader.Name == "iq")
-      {
-        using var sub = reader.ReadSubtree();
-        var infoQuery = (InfoQuery?) infoQuerySerializer.Deserialize(sub);
-        if (infoQuery != null)
+        // Await ReadLock approval
+        try
         {
-          if (infoQuery.StanzaError is not null)
-          {
-            var errors = ParseStanzaErrors(infoQuery.StanzaError.InternalErrors);
-            infoQuery.StanzaError.Errors = errors;
-          }
-          
-          InfoQueries.TryGetValue(infoQuery.Id!, out var infoQueryTaskSource);
-          infoQueryTaskSource?.TrySetResult(infoQuery);
+          await ReadLock.WaitAsync(_cts.Token);
         }
-        
-        ReadLock.Release();
-        continue;
-      }
-
-      if (reader.Name == "message")
-      {
-        using var sub = reader.ReadSubtree();
-        var message = (Message?) messageSerializer.Deserialize(sub);
-        if (message != null)
+        catch (OperationCanceledException)
         {
-          if (message.StanzaError is not null)
-          {
-            var errors = ParseStanzaErrors(message.StanzaError.InternalErrors);
-            message.StanzaError.Errors = errors;
-          }
-          
-          OnMessageReceived?.Invoke(this, new OnMessageReceivedEventArgs { Message = message });
+          break;
         }
-      }
 
-      {
-        using var sub = reader.ReadSubtree();
-        var found = UnexpectedStanzaSerializers.TryGetValue($"{reader.NamespaceURI}/{reader.Name}", out var stanzaSerializer);
-        
-        if (!found)
+        await reader.ReadAsync();
+        Console.WriteLine($"> {reader.Name}: {reader.NamespaceURI}");
+
+        if (reader.NodeType != XmlNodeType.Element)
         {
           ReadLock.Release();
           continue;
         }
-        
-        var stanza = stanzaSerializer.Item1.Deserialize(sub);
-        _ = Task.Run(() => stanzaSerializer.Item2.Invoke(this, stanza));
+
+        if (reader.Name == "stream:stream")
+        {
+          ReadLock.Release();
+          continue;
+        }
+
+        if (reader.Name == "stream:error")
+        {
+          using var sub = reader.ReadSubtree();
+          await sub.ReadAsync();
+          await sub.ReadAsync();
+
+          ErrorSerializers.TryGetValue($"{sub.NamespaceURI}/{sub.Name}", out var errorSerializer);
+          var error = errorSerializer?.Deserialize(sub);
+          if (error != null)
+            ClientErrorRaised?.Invoke(this, new ClientErrorRaisedEventArgs() { Error = (IClientError)error });
+
+          break;
+        }
+
+        if (reader is { Name: "failure", NamespaceURI: "urn:ietf:params:xml:ns:xmpp-sasl" })
+        {
+          using var sub = reader.ReadSubtree();
+          await sub.ReadAsync();
+          await sub.ReadAsync();
+
+          ErrorSerializers.TryGetValue($"{sub.NamespaceURI}/{sub.Name}", out var errorSerializer);
+          var error = errorSerializer?.Deserialize(sub);
+          if (error != null)
+            ClientErrorRaised?.Invoke(this, new ClientErrorRaisedEventArgs() { Error = (IClientError)error });
+
+          break;
+        }
+
+        if (reader.Name == "stream:features")
+        {
+          using var sub = reader.ReadSubtree();
+          await sub.ReadAsync();
+
+          while (await sub.ReadAsync())
+            if (sub is { NodeType: XmlNodeType.Element, Depth: 1 })
+            {
+              Console.WriteLine($"F> {sub.Name}: {sub.NamespaceURI}");
+              FeatureSerializers.TryGetValue(sub.NamespaceURI, out var featureSerializer);
+              var feature = featureSerializer?.Deserialize(sub);
+              if (feature != null)
+                StreamFeatureRequested?.Invoke(this, new StreamFeatureRequestedEventArgs { Feature = feature });
+            }
+
+          ReadLock.Release();
+          continue;
+        }
+
+        if (reader.Name == "iq")
+        {
+          using var sub = reader.ReadSubtree();
+          var infoQuery = (InfoQuery?)infoQuerySerializer.Deserialize(sub);
+          if (infoQuery != null)
+          {
+            if (infoQuery.StanzaError is not null)
+            {
+              var errors = ParseStanzaErrors(infoQuery.StanzaError.InternalErrors);
+              infoQuery.StanzaError.Errors = errors;
+            }
+
+            InfoQueries.TryGetValue(infoQuery.Id!, out var infoQueryTaskSource);
+            infoQueryTaskSource?.TrySetResult(infoQuery);
+          }
+
+          ReadLock.Release();
+          continue;
+        }
+
+        if (reader.Name == "message")
+        {
+          using var sub = reader.ReadSubtree();
+          var message = (Message?)messageSerializer.Deserialize(sub);
+          if (message != null)
+          {
+            if (message.StanzaError is not null)
+            {
+              var errors = ParseStanzaErrors(message.StanzaError.InternalErrors);
+              message.StanzaError.Errors = errors;
+            }
+
+            OnMessageReceived?.Invoke(this, new OnMessageReceivedEventArgs { Message = message });
+          }
+        }
+
+        {
+          using var sub = reader.ReadSubtree();
+          var found = UnexpectedStanzaSerializers.TryGetValue($"{reader.NamespaceURI}/{reader.Name}",
+            out var stanzaSerializer);
+
+          if (!found)
+          {
+            ReadLock.Release();
+            continue;
+          }
+
+          var stanza = stanzaSerializer.Item1.Deserialize(sub);
+          _ = Task.Run(() => stanzaSerializer.Item2.Invoke(this, stanza));
+        }
       }
+
+    }
+    catch (OperationCanceledException)
+    {
+      // e
     }
   }
 }

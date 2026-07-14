@@ -1,6 +1,7 @@
 using System.Net.Security;
 using System.Net.Sockets;
 using FluentResults;
+using Org.BouncyCastle.Tls;
 using XMPP.Core.Address;
 
 namespace XMPP.Core.Backend;
@@ -25,14 +26,19 @@ public class TcpXmppBackend(bool forceTls) : IXmppClientBackend
     NetworkStreamUpdated?.Invoke(this, new NetworkStreamUpdatedEventArgs() {Stream = null});
     await xmppClient.StopBackgroundService();
     
-    SslStream = new SslStream(Stream, false);
-    await SslStream.AuthenticateAsClientAsync(new SslClientAuthenticationOptions()
-    {
-      AllowRenegotiation = false,
-      TargetHost = Address!.Host.TrimEnd(".").ToString()
-    });
+    // SslStream = new SslStream(Stream, false);
+    // await SslStream.AuthenticateAsClientAsync(new SslClientAuthenticationOptions()
+    // {
+    //   AllowRenegotiation = false,
+    //   TargetHost = Address!.Host.TrimEnd(".").ToString()
+    // });
+
+    var target = Address!.Host.TrimEnd(".").ToString();
+    var protocol = new TlsClientProtocol(Stream);
+    var client = new XmppTlsClient(target);
+    protocol.Connect(client);
     
-    NetworkStreamUpdated?.Invoke(this, new NetworkStreamUpdatedEventArgs() {Stream = SslStream});
+    NetworkStreamUpdated?.Invoke(this, new NetworkStreamUpdatedEventArgs() {Stream = protocol.Stream});
     xmppClient.StartBackgroundService();
     xmppClient.ReadLock.Release();
   }

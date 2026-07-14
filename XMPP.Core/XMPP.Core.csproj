@@ -9,6 +9,7 @@
   <ItemGroup>
     <PackageReference Include="DnsClient" />
     <PackageReference Include="FluentResults" />
+    <PackageReference Include="BouncyCastle.Cryptography" />
   </ItemGroup>
 
 </Project>

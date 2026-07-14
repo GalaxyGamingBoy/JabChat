@@ -21,6 +21,7 @@
   <ItemGroup>
     <PackageVersion Include="DnsClient" Version="1.8.0" />
     <PackageVersion Include="FluentResults" Version="4.0.0" />
+    <PackageVersion Include="BouncyCastle.Cryptography" Version="2.6.2" />
   </ItemGroup>
   <ItemGroup>
     <PackageVersion Include="coverlet.collector" Version="6.0.4" />
