@@ -1,0 +1,17 @@
+using System.Security.Cryptography;
+using System.Xml.Linq;
+using XMPP.Core.Address;
+using XMPP.Core.ClientErrors;
+using XMPP.Core.SaslErrors;
+
+namespace XMPP.Core.SaslMechanisms;
+
+public class ScramSha256PlusSaslMechanism : ScramPlusSaslMechanism
+{
+  public override int Priority => 350;
+  protected override string MechanismName => "SHA-256";
+  protected override HashAlgorithmName HashAlgorithm => HashAlgorithmName.SHA256;
+  protected override int HashByteLength => 32;
+  protected override Func<byte[], HMAC> HmacFactory => (k) => new HMACSHA256(k);
+  protected override Func<byte[], byte[]> HashFactory => SHA256.HashData;
+}

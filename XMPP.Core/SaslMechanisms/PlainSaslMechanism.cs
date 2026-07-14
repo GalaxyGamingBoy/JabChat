@@ -1,6 +1,7 @@
 using System.Xml;
 using System.Xml.Linq;
 using XMPP.Core.Address;
+using XMPP.Core.Backend;
 
 namespace XMPP.Core.SaslMechanisms;
 
@@ -11,7 +12,7 @@ public class PlainSaslMechanism : ISaslMechanism
   public string Mechanism => "PLAIN";
   public int Priority => 600;
 
-  public void BindClient(IXmppClient client)
+  public void BindClient(IXmppClient client, IXmppClientBackend backend)
   {
     _client = client;
   }

@@ -1,11 +1,12 @@
 using System.Security.Cryptography;
 using System.Xml.Linq;
+using Org.BouncyCastle.Tls;
 using XMPP.Core.Backend;
 using XMPP.Core.SaslErrors;
 
 namespace XMPP.Core.SaslMechanisms;
 
-public abstract class ScramSaslMechanism : ISaslMechanism
+public abstract class ScramPlusSaslMechanism : ISaslMechanism
 {
   public abstract int Priority { get; }
   protected abstract string MechanismName { get; }
@@ -14,9 +15,10 @@ public abstract class ScramSaslMechanism : ISaslMechanism
   protected abstract Func<byte[], HMAC> HmacFactory { get; }
   protected abstract Func<byte[], byte[]> HashFactory { get; }
   
-  public string Mechanism => $"SCRAM-{MechanismName}"; 
+  public string Mechanism => $"SCRAM-{MechanismName}-PLUS"; 
   
   private IXmppClient _client = null!;
+  private IXmppClientBackend _backend = null!;
   private XmppCredentials _credentials = null!;
   private string _nonce = string.Empty;
 
@@ -29,6 +31,7 @@ public abstract class ScramSaslMechanism : ISaslMechanism
   public void BindClient(IXmppClient client, IXmppClientBackend backend)
   {
     _client = client;
+    _backend = backend;
   }
 
   private byte[] ComputeSaltedPassword(byte[] salt, int iterations)
@@ -85,7 +88,10 @@ public abstract class ScramSaslMechanism : ISaslMechanism
       return;
     }
 
-    _clientFinalNoProof = $"c=biws,r={challengeNonce}";
+    var gs2Header = System.Text.Encoding.UTF8.GetBytes($"p={GetChannelBindingTypeText()},,");
+    var binding = _backend.GetChannelBindingData();
+    var channel = Convert.ToBase64String(gs2Header.Concat(binding).ToArray());
+    _clientFinalNoProof = $"c={channel},r={challengeNonce}";
     
     var salted = ComputeSaltedPassword(challengeSalt, challengeIterations);
     var clientKey = ComputeClientKey(salted);
@@ -101,7 +107,7 @@ public abstract class ScramSaslMechanism : ISaslMechanism
     var proofBytes = clientKey.Zip(clientSignature, (f, s) => (byte)(f ^ s)).ToArray();
     var proof = Convert.ToBase64String(proofBytes);
 
-    var message = $"c=biws,r={challengeNonce},p={proof}";
+    var message = $"{_clientFinalNoProof},p={proof}";
     XNamespace ns = "urn:ietf:params:xml:ns:xmpp-sasl";
     var element = new XElement(ns + "response");
 
@@ -130,7 +136,6 @@ public abstract class ScramSaslMechanism : ISaslMechanism
     _client.ReadLock.Release();
   }
 
-
   public async Task Use(XmppCredentials credentials)
   {
     _nonce = Guid.NewGuid().ToString();
@@ -140,7 +145,7 @@ public abstract class ScramSaslMechanism : ISaslMechanism
     _client.RegisterUnexpectedStanza<SaslSuccess>(OnSuccessReceived);
     
     _clientFirstBare = $"n={credentials.Jid.LocalPart},r={_nonce}";
-    var message = $"n,,{_clientFirstBare}";
+    var message = $"p={GetChannelBindingTypeText()},,{_clientFirstBare}";
     
     XNamespace ns = "urn:ietf:params:xml:ns:xmpp-sasl";
     var element = new XElement(ns + "auth");
@@ -149,6 +154,19 @@ public abstract class ScramSaslMechanism : ISaslMechanism
     var bytes = System.Text.Encoding.UTF8.GetBytes(message);
     element.SetValue(Convert.ToBase64String(bytes));
     
+    Console.WriteLine(GetChannelBindingTypeText());
+    
     await _client.SendStanzaAsync(element);
   } 
+
+  private string GetChannelBindingTypeText()
+  {
+    var version = _backend.ClientProtocolVersion;
+    if (version is null)
+      return string.Empty;
+
+    return version.Equals(ProtocolVersion.TLSv13)
+      ? "tls-exporter"
+      : "tls-unique";
+  }
 }

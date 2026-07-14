@@ -153,19 +153,26 @@ public class XmppClient : IXmppClient, IAsyncDisposable
     RegisterClientError<StanzaErrors.UndefinedCondition>();
     RegisterClientError<StanzaErrors.UnexpectedRequest>();
 
-    // Sasl Mechanisms
-    RegisterSaslMechanism<PlainSaslMechanism>();
-    RegisterSaslMechanism<ScramSha1SaslMechanism>();
-    RegisterSaslMechanism<ScramSha256SaslMechanism>();
-    RegisterSaslMechanism<ScramSha384SaslMechanism>();
-    RegisterSaslMechanism<ScramSha512SaslMechanism>();
-    RegisterSaslMechanism<ScramSha3512SaslMechanism>();
-
     // Backend Configuration
     Backend = backend;
     Backend.UseClient(this);
     Backend.NetworkStreamUpdated += OnUpdatedNetworkStream;
     StreamFeatureRequested += Backend.OnStreamFeatureRequested;
+    
+    // Sasl Mechanisms
+    RegisterSaslMechanism<PlainSaslMechanism>();
+    
+    RegisterSaslMechanism<ScramSha1SaslMechanism>();
+    RegisterSaslMechanism<ScramSha256SaslMechanism>();
+    RegisterSaslMechanism<ScramSha384SaslMechanism>();
+    RegisterSaslMechanism<ScramSha512SaslMechanism>();
+    RegisterSaslMechanism<ScramSha3512SaslMechanism>();
+    
+    RegisterSaslMechanism<ScramSha1PlusSaslMechanism>();
+    RegisterSaslMechanism<ScramSha256PlusSaslMechanism>();
+    RegisterSaslMechanism<ScramSha384PlusSaslMechanism>();
+    RegisterSaslMechanism<ScramSha512PlusSaslMechanism>();
+    RegisterSaslMechanism<ScramSha3512PlusSaslMechanism>();
 
     // Internal Handlers
     StreamFeatureRequested += SaslHandler;
@@ -413,7 +420,7 @@ public class XmppClient : IXmppClient, IAsyncDisposable
   public void RegisterSaslMechanism<T>() where T : ISaslMechanism, new()
   {
     var mech = new T();
-    mech.BindClient(this);
+    mech.BindClient(this, Backend);
     SaslHandlers[mech.Priority] = mech;
   }
 

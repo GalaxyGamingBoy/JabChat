@@ -11,8 +11,8 @@ public class TcpXmppBackend(bool forceTls) : IXmppClientBackend
   private IXmppAddressProvider Provider { get; } = new XmppAddressProvider();
   
   private TcpClient? Client { get; set; }
+  private XmppTlsClient? TlsClient { get; set; }
   private NetworkStream? Stream { get; set; }
-  private SslStream? SslStream { get; set; }
   private XmppAddress? Address { get; set; }
   
   private async Task UpgradeSslStream(IXmppClient xmppClient)
@@ -25,18 +25,11 @@ public class TcpXmppBackend(bool forceTls) : IXmppClientBackend
 
     NetworkStreamUpdated?.Invoke(this, new NetworkStreamUpdatedEventArgs() {Stream = null});
     await xmppClient.StopBackgroundService();
-    
-    // SslStream = new SslStream(Stream, false);
-    // await SslStream.AuthenticateAsClientAsync(new SslClientAuthenticationOptions()
-    // {
-    //   AllowRenegotiation = false,
-    //   TargetHost = Address!.Host.TrimEnd(".").ToString()
-    // });
 
     var target = Address!.Host.TrimEnd(".").ToString();
     var protocol = new TlsClientProtocol(Stream);
-    var client = new XmppTlsClient(target);
-    protocol.Connect(client);
+    TlsClient = new XmppTlsClient(target);
+    protocol.Connect(TlsClient);
     
     NetworkStreamUpdated?.Invoke(this, new NetworkStreamUpdatedEventArgs() {Stream = protocol.Stream});
     xmppClient.StartBackgroundService();
@@ -69,7 +62,7 @@ public class TcpXmppBackend(bool forceTls) : IXmppClientBackend
   public async void OnStreamFeatureRequested(object? sender, StreamFeatureRequestedEventArgs eventArgs)
   {
     var client = (IXmppClient) sender!;
-    if (eventArgs.Feature is Features.StartTlsFeature || (SslStream is null && forceTls))
+    if (eventArgs.Feature is Features.StartTlsFeature || (TlsClient is null && forceTls))
     {
       Console.WriteLine("Attempting to upgrade session to TLS");
       await client.SendStanzaAsync(new StartTls.Command());
@@ -78,11 +71,17 @@ public class TcpXmppBackend(bool forceTls) : IXmppClientBackend
 
   public event EventHandler<NetworkStreamUpdatedEventArgs>? NetworkStreamUpdated;
 
+  public ProtocolVersion? ClientProtocolVersion => TlsClient?.GetNegotiatedVersion();
+  
+  public byte[] GetChannelBindingData()
+  {
+    return TlsClient?.GetChannelBindingData() ?? [];
+  }
+
   public void Dispose()
   {
     Stream?.Dispose();
     Client?.Dispose();
-    SslStream?.Dispose();
   }
 
   public async Task<Result> ConnectAsync(string host)
@@ -111,13 +110,12 @@ public class TcpXmppBackend(bool forceTls) : IXmppClientBackend
 
   public void Disconnect()
   {
-    SslStream?.Close();
     Stream?.Close();
     Client?.Close();
     
-    SslStream = null;
     Stream = null;
     Client = null;
+    TlsClient = null;
     
     NetworkStreamUpdated?.Invoke(this, new  NetworkStreamUpdatedEventArgs { Stream = null });
   }
