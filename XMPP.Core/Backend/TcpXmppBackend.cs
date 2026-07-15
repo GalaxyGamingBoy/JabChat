@@ -1,20 +1,98 @@
-using System.Net.Security;
 using System.Net.Sockets;
-using FluentResults;
+using OneOf;
 using Org.BouncyCastle.Tls;
 using XMPP.Core.Address;
+using XMPP.Core.Errors;
 
 namespace XMPP.Core.Backend;
 
 public class TcpXmppBackend(bool forceTls) : IXmppClientBackend
 {
-  private IXmppAddressProvider Provider { get; } = new XmppAddressProvider();
-  
+  #region Internal Fields
   private TcpClient? Client { get; set; }
   private XmppTlsClient? TlsClient { get; set; }
   private NetworkStream? Stream { get; set; }
-  private XmppAddress? Address { get; set; }
   
+  private string ConnectedHost { get; set; } = string.Empty; 
+  #endregion
+  
+  
+  #region Setup
+  public void UseClient(IXmppClient client)
+  {
+    client.RegisterUnexpectedStanza<StartTls.Proceed>(OnStartTlsProceed);
+    client.RegisterUnexpectedStanza<StartTls.Failure>(OnStartTlsFailure);
+  }
+  
+  // ReSharper disable once AsyncVoidEventHandlerMethod - XmppClient methods protected by result
+  public async void OnStreamFeatureRequested(object? sender, StreamFeatureRequestedEventArgs eventArgs)
+  {
+    var client = (IXmppClient) sender!;
+    if (eventArgs.Feature is Features.StartTlsFeature || (TlsClient is null && forceTls))
+    {
+      Console.WriteLine("Attempting to upgrade session to TLS");
+      await client.SendStanzaAsync(new StartTls.Command());
+    }
+  }
+  
+  public void Dispose()
+  {
+    NetworkStreamUpdated?.Invoke(this, new NetworkStreamUpdatedEventArgs { Stream = null });
+    
+    Stream?.Dispose();
+    Stream = null;
+    
+    Client?.Dispose();
+    Client = null;
+    
+    GC.SuppressFinalize(this);
+  }
+  #endregion
+
+  
+  #region Connection Handling
+  public event EventHandler<NetworkStreamUpdatedEventArgs>? NetworkStreamUpdated;
+  
+  public async Task<OneOf<
+    Unit,
+    BackendConnectResults.AddressPortInvalid,
+    BackendConnectResults.ClientAlreadyConnected,
+    BackendConnectResults.ConnectionFailure
+  >> ConnectAsync(XmppAddress address)
+  {
+    try
+    {
+      if (Client is not null || Stream is not null)
+        return new BackendConnectResults.AddressPortInvalid();
+
+      Client = new TcpClient();
+      ConnectedHost = address.Host.TrimEnd(".").ToString();
+
+      Client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
+      await Client.ConnectAsync(address.Ip, address.Port);
+      Stream = Client.GetStream();
+
+      NetworkStreamUpdated?.Invoke(this, new NetworkStreamUpdatedEventArgs { Stream = Stream });
+
+      return new Unit();
+    }
+    catch (ArgumentOutOfRangeException)
+    {
+      Dispose();
+      return new BackendConnectResults.AddressPortInvalid();
+    }
+    catch (SocketException)
+    {
+      Dispose();
+      return new BackendConnectResults.ConnectionFailure();
+    }
+  }
+
+  public void Disconnect() => Dispose(); 
+#endregion
+  
+  
+  #region Ssl Upgrade Logic
   private async Task UpgradeSslStream(IXmppClient xmppClient)
   {
     if (Client is null || Stream is null)
@@ -26,16 +104,23 @@ public class TcpXmppBackend(bool forceTls) : IXmppClientBackend
     NetworkStreamUpdated?.Invoke(this, new NetworkStreamUpdatedEventArgs() {Stream = null});
     await xmppClient.StopBackgroundService();
 
-    var target = Address!.Host.TrimEnd(".").ToString();
     var protocol = new TlsClientProtocol(Stream);
-    TlsClient = new XmppTlsClient(target);
-    protocol.Connect(TlsClient);
+    TlsClient = new XmppTlsClient(ConnectedHost);
+    
+    try
+    {
+      protocol.Connect(TlsClient);
+    }
+    catch (IOException)
+    {
+      xmppClient.InvokeClientError(new StartTls.Failure());
+    }
     
     NetworkStreamUpdated?.Invoke(this, new NetworkStreamUpdatedEventArgs() {Stream = protocol.Stream});
     xmppClient.StartBackgroundService();
     xmppClient.ReadLock.Release();
-  }
-
+  } 
+  
   private async Task OnStartTlsProceed(object sender, object? stanza)
   {
     Console.WriteLine("Server confirmed TLS upgrade, proceeding...");
@@ -44,7 +129,7 @@ public class TcpXmppBackend(bool forceTls) : IXmppClientBackend
     await ((XmppClient)sender).OpenXmppStream();
     Console.WriteLine("TLS upgrade complete");
   }
-
+  
   private Task OnStartTlsFailure(object sender, object? stanza)
   {
     var client = (IXmppClient) sender;
@@ -52,71 +137,15 @@ public class TcpXmppBackend(bool forceTls) : IXmppClientBackend
     client.InvokeClientError(new StartTls.Failure());
     return Task.CompletedTask;
   }
+  #endregion
 
-  public void UseClient(IXmppClient client)
-  {
-    client.RegisterUnexpectedStanza<StartTls.Proceed>(OnStartTlsProceed);
-    client.RegisterUnexpectedStanza<StartTls.Failure>(OnStartTlsFailure);
-  }
 
-  public async void OnStreamFeatureRequested(object? sender, StreamFeatureRequestedEventArgs eventArgs)
-  {
-    var client = (IXmppClient) sender!;
-    if (eventArgs.Feature is Features.StartTlsFeature || (TlsClient is null && forceTls))
-    {
-      Console.WriteLine("Attempting to upgrade session to TLS");
-      await client.SendStanzaAsync(new StartTls.Command());
-    }
-  }
-
-  public event EventHandler<NetworkStreamUpdatedEventArgs>? NetworkStreamUpdated;
-
+  #region SASL
   public ProtocolVersion? ClientProtocolVersion => TlsClient?.GetNegotiatedVersion();
   
   public byte[] GetChannelBindingData()
   {
     return TlsClient?.GetChannelBindingData() ?? [];
   }
-
-  public void Dispose()
-  {
-    Stream?.Dispose();
-    Client?.Dispose();
-  }
-
-  public async Task<Result> ConnectAsync(string host)
-  {
-    var addr = await Provider.GetAddressAsync(host);
-    if (addr is null)
-      return Result.Fail("No XMPP address found for Host");
-    
-    return await ConnectAsync(addr); 
-  }
-
-  public async Task<Result> ConnectAsync(XmppAddress address)
-  {
-    Stream = null;
-    Client = new TcpClient();
-    Address = address;
-    
-    await Client.ConnectAsync(address.Ip, address.Port);
-    
-    Stream = Client.GetStream();
-    Client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
-    
-    NetworkStreamUpdated?.Invoke(this, new NetworkStreamUpdatedEventArgs { Stream = Stream });
-    return Result.Ok();
-  }
-
-  public void Disconnect()
-  {
-    Stream?.Close();
-    Client?.Close();
-    
-    Stream = null;
-    Client = null;
-    TlsClient = null;
-    
-    NetworkStreamUpdated?.Invoke(this, new  NetworkStreamUpdatedEventArgs { Stream = null });
-  }
+  #endregion
 }
