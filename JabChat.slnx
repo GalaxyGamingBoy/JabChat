@@ -9,6 +9,7 @@
   <Project Path="JabChat.Android\JabChat.Android.csproj" />
   <Project Path="JabChat.Browser\JabChat.Browser.csproj" />
   <Project Path="JabChat.Desktop\JabChat.Desktop.csproj" />
+  <Project Path="JabChat.Migrations/JabChat.Migrations.csproj" />
   <Project Path="JabChat\JabChat.csproj" />
   <Project Path="XMPP.Core.Tests/XMPP.Core.Tests.csproj" />
 </Solution>

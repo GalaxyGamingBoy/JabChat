@@ -18,4 +18,17 @@
     <ItemGroup>
         <ProjectReference Include="..\JabChat\JabChat.csproj" />
     </ItemGroup>
+
+    <ItemGroup>
+      <_ContentIncludedByDefault Remove="wwwroot\sqlite-wasm-3530300\jswasm\sqlite3-opfs-async-proxy.js" />
+      <_ContentIncludedByDefault Remove="wwwroot\sqlite-wasm-3530300\jswasm\sqlite3-worker1-bundler-friendly.mjs" />
+      <_ContentIncludedByDefault Remove="wwwroot\sqlite-wasm-3530300\jswasm\sqlite3-worker1-promiser-bundler-friendly.mjs" />
+      <_ContentIncludedByDefault Remove="wwwroot\sqlite-wasm-3530300\jswasm\sqlite3-worker1-promiser.js" />
+      <_ContentIncludedByDefault Remove="wwwroot\sqlite-wasm-3530300\jswasm\sqlite3-worker1-promiser.mjs" />
+      <_ContentIncludedByDefault Remove="wwwroot\sqlite-wasm-3530300\jswasm\sqlite3-worker1.js" />
+      <_ContentIncludedByDefault Remove="wwwroot\sqlite-wasm-3530300\jswasm\sqlite3-worker1.mjs" />
+      <_ContentIncludedByDefault Remove="wwwroot\sqlite-wasm-3530300\jswasm\sqlite3.js" />
+      <_ContentIncludedByDefault Remove="wwwroot\sqlite-wasm-3530300\jswasm\sqlite3.mjs" />
+      <_ContentIncludedByDefault Remove="wwwroot\sqlite-wasm-3530300\jswasm\sqlite3.wasm" />
+    </ItemGroup>
 </Project>

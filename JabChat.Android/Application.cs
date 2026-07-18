@@ -15,7 +15,7 @@ namespace App.Android
 
     protected override AppBuilder CustomizeAppBuilder(AppBuilder builder)
     {
-      App.ServiceCollection.AddPlatformServices<DefaultSettingsStorageService>();
+      App.ServiceCollection.AddPlatformServices<DefaultSettingsStorageService, DefaultDatabaseService>();
       
       return base.CustomizeAppBuilder(builder)
         .WithInterFont();

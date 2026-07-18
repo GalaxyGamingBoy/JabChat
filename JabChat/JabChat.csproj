@@ -22,7 +22,13 @@
             <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
         </PackageReference>
         <PackageReference Include="CommunityToolkit.Mvvm" />
+        
         <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+        <PackageReference Include="Dapper" />
+        <PackageReference Include="Microsoft.Data.Sqlite" />
+        
+        <PackageReference Include="FluentMigrator.Runner" />
+        <ProjectReference Include="..\JabChat.Migrations\JabChat.Migrations.csproj" />
     </ItemGroup>
 
     <ItemGroup>

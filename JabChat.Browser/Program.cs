@@ -9,7 +9,18 @@ internal sealed partial class Program
 {
   private static Task Main(string[] args)
   {
-    App.App.ServiceCollection.AddPlatformServices<BrowserSettingsStorageService>();
+    Console.WriteLine("Begin");
+    try
+    {
+      Console.WriteLine("SQLitePCL.Batteries_V2.Init()");
+    }
+    catch (Exception e)
+    {
+      Console.WriteLine(e.Message);
+    }
+    Console.WriteLine("[SQLite] Provider initialized: sqlite3");
+    
+    App.App.ServiceCollection.AddPlatformServices<BrowserSettingsStorageService, BrowserDatabaseService>();
     
     return BuildAvaloniaApp()
       .WithInterFont()

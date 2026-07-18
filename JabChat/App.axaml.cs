@@ -9,6 +9,7 @@ using App.Settings;
 using Avalonia.Markup.Xaml;
 using App.ViewModels;
 using App.Views;
+using FluentMigrator.Runner;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace App;
@@ -29,10 +30,16 @@ public partial class App : Application
     ServiceCollection.AddCommonServices();
     
     var services = ServiceCollection.BuildServiceProvider();
-    
+ 
+    // Load Settings
     var settingsService = services.GetRequiredService<ISettingsService>();
     await settingsService.Load();
 
+    // Load Migrations
+    var migrationRunner = services.GetRequiredService<IMigrationRunner>();
+    migrationRunner.MigrateUp();
+    
+    // Load UI
     var vm = services.GetRequiredService<MainViewModel>();
     if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
     {

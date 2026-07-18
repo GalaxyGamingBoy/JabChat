@@ -12,7 +12,7 @@ sealed class Program
   [STAThread]
   public static void Main(string[] args)
   {
-    App.ServiceCollection.AddPlatformServices<DefaultSettingsStorageService>();
+    App.ServiceCollection.AddPlatformServices<DefaultSettingsStorageService, DefaultDatabaseService>();
     
     BuildAvaloniaApp()
       .StartWithClassicDesktopLifetime(args); 
