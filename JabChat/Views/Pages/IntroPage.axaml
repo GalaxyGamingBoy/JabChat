@@ -33,7 +33,7 @@
         <StackPanel DockPanel.Dock="Bottom" HorizontalAlignment="Center">
             <TextBlock Margin="0 6">Ready to chat? Connect your account!</TextBlock>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                <Button Margin="8 0">Later</Button>
+                <Button Margin="8 0" Command="{Binding LaterCommand}">Later</Button>
                 <Button Margin="8 0">Connect account</Button>
             </StackPanel>
         </StackPanel>
@@ -59,10 +59,6 @@
             
                         <Style Selector="^:selected /template/ ContentPresenter#PART_ContentPresenter">
                             <Setter Property="Background" Value="Transparent" />
-                        </Style>
-                        
-                        <Style Selector="^:selected Ellipse">
-                            <Setter Property="Fill" Value="{DynamicResource SystemBaseHighColor}"></Setter>
                         </Style>
                         
                         <Style Selector="^:selected Ellipse">

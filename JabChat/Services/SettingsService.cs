@@ -33,7 +33,6 @@ public class SettingsService : ISettingsService
 
   public async Task Save()
   {
-    Console.WriteLine("SV");
     var serialized  = JsonSerializer.Serialize(Settings);
     await _storage.WriteAsync(serialized);
   }

@@ -13,6 +13,7 @@ public partial class MainView : UserControl
   {
     InitializeComponent();
     
+    RegisterNavigator();
     RegisterIntroWindowMessage();
   }
 
@@ -23,6 +24,7 @@ public partial class MainView : UserControl
     WeakReferenceMessenger.Default.Register<MainView, FetchServiceProviderMessage>(this, (recipient, message) =>
       message.Reply(provider));
     
+    RegisterNavigator();
     RegisterIntroWindowMessage();
   }
 
@@ -40,4 +42,14 @@ public partial class MainView : UserControl
       var dialog = prov.Response.GetRequiredService<Pages.IntroPage>();
       await Navigator.PushAsync(dialog);
     });
+
+  private void RegisterNavigator()
+  {
+    WeakReferenceMessenger.Default.Register<MainView, NavigatorPushMessage>(this, async (recipient, message) =>
+      await Navigator.PushAsync(message.Page));
+    WeakReferenceMessenger.Default.Register<MainView, NavigatorPopMessage>(this, async (recipient, message) =>
+      await Navigator.PopAsync());
+    WeakReferenceMessenger.Default.Register<MainView, NavigatorPopAllMessage>(this, async (recipient, message) =>
+      await Navigator.PopToRootAsync());
+  }
 }

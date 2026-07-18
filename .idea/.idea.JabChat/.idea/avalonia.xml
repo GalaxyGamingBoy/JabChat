@@ -12,6 +12,7 @@
         <entry key="JabChat/Views/MainView.axaml" value="JabChat.Desktop/JabChat.Desktop.csproj" />
         <entry key="JabChat/Views/MainWindow.axaml" value="JabChat.Desktop/JabChat.Desktop.csproj" />
         <entry key="JabChat/Views/Pages/IntroPage.axaml" value="JabChat.Desktop/JabChat.Desktop.csproj" />
+        <entry key="JabChat/Views/Pages/MainPage.axaml" value="JabChat.Desktop/JabChat.Desktop.csproj" />
       </map>
     </option>
   </component>

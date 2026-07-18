@@ -7,12 +7,12 @@ public sealed class DefaultSettingsStorageService : ISettingsStorageService
   private string SettingsFile
     => Path.Combine(SettingsDirectory, "settings.json");
   
-  public async Task<string?> ReadAsync()
+  public Task<string?> ReadAsync()
   {
     if (!File.Exists(SettingsFile))
-      return null;
+      return Task.FromResult<string?>(null);
     
-    return await File.ReadAllTextAsync(SettingsFile);
+    return Task.FromResult<string?>(File.ReadAllText(SettingsFile));
   }
 
   public async Task WriteAsync(string data)

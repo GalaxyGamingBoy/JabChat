@@ -1,6 +1,11 @@
 using System.Collections.ObjectModel;
+using App.Messages;
+using App.Services;
+using App.Settings;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 
 namespace App.ViewModels;
 
@@ -19,13 +24,24 @@ public partial class IntroViewModel : ViewModelBase, IDisposable
 
   private readonly DispatcherTimer _timer = new DispatcherTimer();
   
-  public IntroViewModel()
+  private readonly AppSettings _settings;
+  
+  public IntroViewModel(AppSettings settings)
   {
+    _settings = settings;
+    
     _timer.Interval = TimeSpan.FromSeconds(6);
     _timer.Tick += Timer_Tick;
     
     Carousels.CollectionChanged += (_, __) => OnPropertyChanged(nameof(CarouselIndexes));
   }
+
+  [RelayCommand]
+  private void Later()
+  {
+    _settings.SeenIntro = true;
+    WeakReferenceMessenger.Default.Send<NavigatorPopAllMessage>();
+  } 
 
   public void StartCarousel() => _timer.Start();
   
