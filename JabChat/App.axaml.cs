@@ -4,6 +4,8 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Data.Core;
 using Avalonia.Data.Core.Plugins;
 using System.Linq;
+using App.Services;
+using App.Settings;
 using Avalonia.Markup.Xaml;
 using App.ViewModels;
 using App.Views;
@@ -13,21 +15,25 @@ namespace App;
 
 public partial class App : Application
 {
+  public static readonly ServiceCollection ServiceCollection = [];
+  
   public override void Initialize()
   {
     AvaloniaXamlLoader.Load(this);
   }
 
-  public override void OnFrameworkInitializationCompleted()
+  public override async void OnFrameworkInitializationCompleted()
   {
     Lang.Resources.Culture = new CultureInfo("en-US");
-    
-    var collection = new ServiceCollection();
-    collection.AddCommonServices();
-    
-    var services = collection.BuildServiceProvider();
-    var vm = services.GetRequiredService<MainViewModel>();
 
+    ServiceCollection.AddCommonServices();
+    
+    var services = ServiceCollection.BuildServiceProvider();
+    
+    var settingsService = services.GetRequiredService<ISettingsService>();
+    await settingsService.Load();
+
+    var vm = services.GetRequiredService<MainViewModel>();
     if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
     {
       desktop.MainWindow = new MainWindow

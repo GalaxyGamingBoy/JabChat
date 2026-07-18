@@ -1,6 +1,6 @@
 {
     "profiles": {
-    "App.Browser": {
+    "JabChat.Browser": {
         "commandName": "Project",
         "launchBrowser": true,
         "environmentVariables": {

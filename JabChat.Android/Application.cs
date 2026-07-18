@@ -1,5 +1,6 @@
 ﻿using Android.App;
 using Android.Runtime;
+using App.Services;
 using Avalonia;
 using Avalonia.Android;
 
@@ -14,6 +15,8 @@ namespace App.Android
 
     protected override AppBuilder CustomizeAppBuilder(AppBuilder builder)
     {
+      App.ServiceCollection.AddPlatformServices<DefaultSettingsStorageService>();
+      
       return base.CustomizeAppBuilder(builder)
         .WithInterFont();
     }

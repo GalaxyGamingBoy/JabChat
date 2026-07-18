@@ -6,6 +6,9 @@
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <Nullable>enable</Nullable>
         <RootNamespace>App.Browser</RootNamespace>
+
+        <PublishTrimmed>false</PublishTrimmed>
+        <PublishAot>false</PublishAot>
     </PropertyGroup>
 
     <ItemGroup>
