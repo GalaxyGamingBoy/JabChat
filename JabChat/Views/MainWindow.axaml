@@ -8,5 +8,5 @@
         x:Class="App.Views.MainWindow"
         Icon="/Assets/avalonia-logo.ico"
         Title="JabChat" Width="800" Height="450">
-    <views:MainView />
+    <views:MainView Name="Main" />
 </Window>

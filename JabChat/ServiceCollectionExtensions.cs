@@ -5,6 +5,7 @@ using App.Views;
 using FluentMigrator.Runner;
 using JabChat.Migrations;
 using Microsoft.Extensions.DependencyInjection;
+using IntroPage = App.Views.Pages.IntroPage;
 
 namespace App;
 
@@ -16,7 +17,8 @@ public static class ServiceCollectionExtensions
     collection.AddTransient<IntroViewModel>();
       
     collection.AddTransient<MainWindow>();
-    collection.AddTransient<IntroWindow>();
+    collection.AddTransient<MainView>();
+    collection.AddTransient<IntroPage>();
     
     collection.AddSingleton<ISettingsService, SettingsService>();
     collection.AddTransient<IDatabaseConnection, DatabaseConnection>();

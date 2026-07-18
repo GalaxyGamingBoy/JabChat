@@ -13,18 +13,7 @@ public partial class MainWindow : Window
     InitializeComponent();
     DataContext = vm;
     
-    WeakReferenceMessenger.Default.Register<MainWindow, ShowIntroWindowMessage>(this, (recipient, message) =>
-    {
-      var dialog = provider.GetRequiredService<IntroWindow>();
-      dialog.ShowDialog(recipient);
-    });
-    
-  }
-
-  protected override void OnOpened(EventArgs e)
-  {
-    base.OnOpened(e);
-    
-    ((MainViewModel)DataContext!).CheckIntroSeen();
+    WeakReferenceMessenger.Default.Register<MainWindow, FetchServiceProviderMessage>(this, (recipient, message) =>
+      message.Reply(provider));
   }
 }

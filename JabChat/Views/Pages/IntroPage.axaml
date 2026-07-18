@@ -1,18 +1,18 @@
-<Window xmlns="https://github.com/avaloniaui"
+<ContentPage xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="using:App.ViewModels"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-        x:Class="App.Views.IntroWindow"
+        x:Class="App.Views.Pages.IntroPage"
         x:DataType="vm:IntroViewModel"
-        Width="640" Height="360" Title="JabChat : Intro"
-        WindowStartupLocation="CenterOwner">
+        Width="640" Height="360" Header="JabChat : Introduction"
+        NavigationPage.HasNavigationBar="False">
     <Design.DataContext>
         <vm:IntroViewModel />
     </Design.DataContext>
     
-    <Window.Styles>
+    <ContentPage.Styles>
         <Style Selector="TextBlock.span">
             <Setter Property="FontSize" Value="12"></Setter>
             <Setter Property="Opacity" Value="0.6"></Setter>
@@ -22,7 +22,7 @@
             <Setter Property="FontSize" Value="24"></Setter>
             <Setter Property="FontWeight" Value="Bold"></Setter>
         </Style>
-    </Window.Styles>
+    </ContentPage.Styles>
     
     <DockPanel Margin="12">
         <StackPanel DockPanel.Dock="Top" HorizontalAlignment="Center">
@@ -38,7 +38,7 @@
             </StackPanel>
         </StackPanel>
         
-        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0 4">
+        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0 8">
             <Carousel IsSwipeEnabled="True" SelectedIndex="{Binding SelectedCarouselIndex}" ItemsSource="{Binding Carousels}">
                 <Carousel.ItemTemplate>
                     <DataTemplate>
@@ -97,4 +97,4 @@
             </ListBox>
         </StackPanel>
     </DockPanel>
-</Window>
+</ContentPage>

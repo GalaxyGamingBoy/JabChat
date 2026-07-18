@@ -1,12 +1,11 @@
 using App.ViewModels;
 using Avalonia.Controls;
-using Avalonia.Threading;
 
-namespace App.Views;
+namespace App.Views.Pages;
 
-public partial class IntroWindow : Window
+public partial class IntroPage : ContentPage
 {
-  public IntroWindow(IntroViewModel vm)
+  public IntroPage(IntroViewModel vm)
   {
     InitializeComponent();
     DataContext = vm;
