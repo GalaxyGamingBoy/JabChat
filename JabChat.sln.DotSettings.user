@@ -72,6 +72,7 @@
 	<s:Boolean x:Key="/Default/ResxEditorPersonal/CheckedGroups/=App_002FAssets_002FResources1resx/@EntryIndexRemoved">True</s:Boolean>
 	<s:Boolean x:Key="/Default/ResxEditorPersonal/CheckedGroups/=JabChat_002FLang_002FResources/@EntryIndexedValue">True</s:Boolean>
 	<s:Boolean x:Key="/Default/ResxEditorPersonal/Initialized/@EntryValue">True</s:Boolean>
+	<s:Boolean x:Key="/Default/ResxEditorPersonal/ShowComments/@EntryValue">False</s:Boolean>
 	<s:Boolean x:Key="/Default/UnloadedProject/UnloadedProjects/=02060c16_002Dd5bc_002Db324_002D6900_002Dcc3a2f721f08_0023XMPP_002ECore/@EntryIndexedValue">True</s:Boolean>
 	<s:Boolean x:Key="/Default/UnloadedProject/UnloadedProjects/=06a18784_002D0637_002Dd443_002D2e01_002D0885cf7266df_0023Cli/@EntryIndexedValue">True</s:Boolean>
 	

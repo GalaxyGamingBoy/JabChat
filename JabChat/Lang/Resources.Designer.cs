@@ -50,5 +50,47 @@ namespace App.Lang {
                 return ResourceManager.GetString("MainView.Greeting", resourceCulture);
             }
         }
+        
+        public static string IntroPage_Carousel_Messenger {
+            get {
+                return ResourceManager.GetString("IntroPage.Carousel.Messenger", resourceCulture);
+            }
+        }
+        
+        public static string IntroPage_Carousel_Status {
+            get {
+                return ResourceManager.GetString("IntroPage.Carousel.Status", resourceCulture);
+            }
+        }
+        
+        public static string IntroPage_Carousel_CrossPlatform {
+            get {
+                return ResourceManager.GetString("IntroPage.Carousel.CrossPlatform", resourceCulture);
+            }
+        }
+        
+        public static string IntroPage_Welcome {
+            get {
+                return ResourceManager.GetString("IntroPage.Welcome", resourceCulture);
+            }
+        }
+        
+        public static string IntroPage_Carousel_ButtonConnect {
+            get {
+                return ResourceManager.GetString("IntroPage.Carousel.ButtonConnect", resourceCulture);
+            }
+        }
+        
+        public static string IntroPage_Carousel_ButtonLater {
+            get {
+                return ResourceManager.GetString("IntroPage.Carousel.ButtonLater", resourceCulture);
+            }
+        }
+        
+        public static string IntroPage_CallToAction {
+            get {
+                return ResourceManager.GetString("IntroPage.CallToAction", resourceCulture);
+            }
+        }
     }
 }

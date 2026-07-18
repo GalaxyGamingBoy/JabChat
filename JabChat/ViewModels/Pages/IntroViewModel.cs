@@ -15,9 +15,9 @@ public partial class IntroViewModel : ViewModelBase, IDisposable
   public partial int SelectedCarouselIndex { get; set; } = 0;
   
   public ObservableCollection<string> Carousels { get; } = [
-      "Send messages to any XMPP user",
-      "Share status updates",
-      "Familiar design across all your devices"
+      Lang.Resources.IntroPage_Carousel_Messenger,
+      Lang.Resources.IntroPage_Carousel_Status,
+      Lang.Resources.IntroPage_Carousel_CrossPlatform
   ];
   
   public IEnumerable<int> CarouselIndexes => Enumerable.Range(0, Carousels.Count);

@@ -3,6 +3,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="using:App.ViewModels"
+        xmlns:lang="using:App.Lang"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="App.Views.Pages.IntroPage"
         x:DataType="vm:IntroViewModel"
@@ -24,17 +25,19 @@
         </Style>
     </ContentPage.Styles>
     
-    <DockPanel Margin="12">
+    <DockPanel>
         <StackPanel DockPanel.Dock="Top" HorizontalAlignment="Center">
             <TextBlock Classes="span" HorizontalAlignment="Center">v0.0.1</TextBlock>
-            <TextBlock HorizontalAlignment="Center" Classes="h1">Welcome to JabChat!</TextBlock>
+            <TextBlock HorizontalAlignment="Center" Classes="h1" Text="{x:Static lang:Resources.IntroPage_Welcome}"></TextBlock>
         </StackPanel>
         
         <StackPanel DockPanel.Dock="Bottom" HorizontalAlignment="Center">
-            <TextBlock Margin="0 6">Ready to chat? Connect your account!</TextBlock>
+            <TextBlock Margin="0 18 0 6" Text="{x:Static lang:Resources.IntroPage_CallToAction}"></TextBlock>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                <Button Margin="8 0" Command="{Binding LaterCommand}">Later</Button>
-                <Button Margin="8 0">Connect account</Button>
+                <Button Margin="8 0" Command="{Binding LaterCommand}"
+                        Content="{x:Static lang:Resources.IntroPage_Carousel_ButtonLater}" />
+                <Button Margin="8 0"
+                        Content="{x:Static lang:Resources.IntroPage_Carousel_ButtonConnect}"/>
             </StackPanel>
         </StackPanel>
         
