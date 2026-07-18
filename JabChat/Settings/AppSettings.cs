@@ -6,5 +6,5 @@ namespace App.Settings;
 public partial class AppSettings : ObservableObject
 {
   [ObservableProperty]
-  public partial bool Test { get; set; } = false;
+  public partial bool SeenIntro { get; set; } = false;
 }

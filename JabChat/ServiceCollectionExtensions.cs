@@ -1,6 +1,7 @@
 using App.Services;
 using App.Settings;
 using App.ViewModels;
+using App.Views;
 using FluentMigrator.Runner;
 using JabChat.Migrations;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,6 +13,10 @@ public static class ServiceCollectionExtensions
   public static void AddCommonServices(this IServiceCollection collection)
   {
     collection.AddTransient<MainViewModel>();
+    collection.AddTransient<IntroViewModel>();
+      
+    collection.AddTransient<MainWindow>();
+    collection.AddTransient<IntroWindow>();
     
     collection.AddSingleton<ISettingsService, SettingsService>();
     collection.AddTransient<IDatabaseConnection, DatabaseConnection>();

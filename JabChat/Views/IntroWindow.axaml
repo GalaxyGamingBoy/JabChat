@@ -1,0 +1,100 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="using:App.ViewModels"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="App.Views.IntroWindow"
+        x:DataType="vm:IntroViewModel"
+        Width="640" Height="360" Title="JabChat : Intro"
+        WindowStartupLocation="CenterOwner">
+    <Design.DataContext>
+        <vm:IntroViewModel />
+    </Design.DataContext>
+    
+    <Window.Styles>
+        <Style Selector="TextBlock.span">
+            <Setter Property="FontSize" Value="12"></Setter>
+            <Setter Property="Opacity" Value="0.6"></Setter>
+        </Style>
+        
+        <Style Selector="TextBlock.h1">
+            <Setter Property="FontSize" Value="24"></Setter>
+            <Setter Property="FontWeight" Value="Bold"></Setter>
+        </Style>
+    </Window.Styles>
+    
+    <DockPanel Margin="12">
+        <StackPanel DockPanel.Dock="Top" HorizontalAlignment="Center">
+            <TextBlock Classes="span" HorizontalAlignment="Center">v0.0.1</TextBlock>
+            <TextBlock HorizontalAlignment="Center" Classes="h1">Welcome to JabChat!</TextBlock>
+        </StackPanel>
+        
+        <StackPanel DockPanel.Dock="Bottom" HorizontalAlignment="Center">
+            <TextBlock Margin="0 6">Ready to chat? Connect your account!</TextBlock>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                <Button Margin="8 0">Later</Button>
+                <Button Margin="8 0">Connect account</Button>
+            </StackPanel>
+        </StackPanel>
+        
+        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0 4">
+            <Carousel IsSwipeEnabled="True" SelectedIndex="{Binding SelectedCarouselIndex}" ItemsSource="{Binding Carousels}">
+                <Carousel.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Spacing="4">
+                            <Border Width="420" Height="200" Background="Aquamarine" CornerRadius="12"></Border>
+                            <TextBlock Margin="0 -24" HorizontalAlignment="Center" Text="{Binding}"></TextBlock>
+                        </StackPanel>
+                    </DataTemplate>
+                </Carousel.ItemTemplate>
+            </Carousel>
+            
+            <ListBox Margin="0 2" HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                     SelectionMode="Single" SelectedIndex="{Binding SelectedCarouselIndex}"
+                     ItemsSource="{Binding CarouselIndexes}" Background="Transparent">
+                <ListBox.Styles>
+                    <Style Selector="ListBoxItem">
+                        <Setter Property="Background" Value="Transparent"/>
+            
+                        <Style Selector="^:selected /template/ ContentPresenter#PART_ContentPresenter">
+                            <Setter Property="Background" Value="Transparent" />
+                        </Style>
+                        
+                        <Style Selector="^:selected Ellipse">
+                            <Setter Property="Fill" Value="{DynamicResource SystemBaseHighColor}"></Setter>
+                        </Style>
+                        
+                        <Style Selector="^:selected Ellipse">
+                            <Setter Property="Fill" Value="{DynamicResource SystemBaseHighColor}"></Setter>
+                        </Style>
+                        
+                        <Style Selector="^:not(:selected) Ellipse">
+                            <Setter Property="Fill" Value="{DynamicResource SystemBaseLowColor}"></Setter>
+                        </Style>
+
+                        <Style Selector="^:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+                            <Setter Property="Background" Value="Transparent" />
+                        </Style>
+
+                        <Style Selector="^:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+                            <Setter Property="Background" Value="Transparent" />
+                        </Style>
+                    </Style>
+                </ListBox.Styles>
+                
+                <ListBox.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Spacing="4" Orientation="Horizontal"></StackPanel>
+                    </ItemsPanelTemplate>
+                </ListBox.ItemsPanel>
+                
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Ellipse Width="8" Height="8"></Ellipse>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </StackPanel>
+    </DockPanel>
+</Window>
