@@ -22,7 +22,7 @@
         <value>Hello World</value>
     </data>
     <data name="IntroPage.Carousel.Messenger" xml:space="preserve">
-        <value>Send messages everywhere XMPP goes</value>
+        <value>Send messages everywhere XMPP</value>
     </data>
     <data name="IntroPage.Carousel.Status" xml:space="preserve">
         <value>Share your status and availability</value>

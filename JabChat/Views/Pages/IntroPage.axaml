@@ -7,7 +7,7 @@
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="App.Views.Pages.IntroPage"
         x:DataType="vm:IntroViewModel"
-        Width="640" Height="360" Header="JabChat : Introduction"
+        Header="JabChat : Introduction"
         NavigationPage.HasNavigationBar="False">
     <Design.DataContext>
         <vm:IntroViewModel />
@@ -26,12 +26,12 @@
     </ContentPage.Styles>
     
     <DockPanel>
-        <StackPanel DockPanel.Dock="Top" HorizontalAlignment="Center">
+        <StackPanel DockPanel.Dock="Top" HorizontalAlignment="Center" Margin="0 8 0 0">
             <TextBlock Classes="span" HorizontalAlignment="Center">v0.0.1</TextBlock>
             <TextBlock HorizontalAlignment="Center" Classes="h1" Text="{x:Static lang:Resources.IntroPage_Welcome}"></TextBlock>
         </StackPanel>
         
-        <StackPanel DockPanel.Dock="Bottom" HorizontalAlignment="Center">
+        <StackPanel DockPanel.Dock="Bottom" HorizontalAlignment="Center" Margin="0 0 0 8">
             <TextBlock Margin="0 18 0 6" Text="{x:Static lang:Resources.IntroPage_CallToAction}"></TextBlock>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                 <Button Margin="8 0" Command="{Binding LaterCommand}"
@@ -42,11 +42,25 @@
         </StackPanel>
         
         <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0 8">
-            <Carousel IsSwipeEnabled="True" SelectedIndex="{Binding SelectedCarouselIndex}" ItemsSource="{Binding Carousels}">
+            <Carousel IsSwipeEnabled="True" SelectedIndex="{Binding SelectedCarouselIndex}" ItemsSource="{Binding Carousels}"
+                      Container.Name="CarouselContainer" Container.Sizing="Width">
+                <Carousel.Styles>
+                    <ContainerQuery Name="CarouselContainer" Query="max-width:420">
+                        <Style Selector="StackPanel Border">
+                            <Setter Property="Width" Value="260"></Setter>
+                        </Style>
+                    </ContainerQuery>
+                    <ContainerQuery Name="CarouselContainer" Query="min-width:420">
+                        <Style Selector="StackPanel Border">
+                            <Setter Property="Width" Value="420"></Setter>
+                        </Style>
+                    </ContainerQuery>
+                </Carousel.Styles>
+                
                 <Carousel.ItemTemplate>
                     <DataTemplate>
                         <StackPanel Spacing="4">
-                            <Border Width="420" Height="200" Background="Aquamarine" CornerRadius="12"></Border>
+                            <Border Background="Aquamarine" Height="200" CornerRadius="12"> </Border>
                             <TextBlock Margin="0 -24" HorizontalAlignment="Center" Text="{Binding}"></TextBlock>
                         </StackPanel>
                     </DataTemplate>
