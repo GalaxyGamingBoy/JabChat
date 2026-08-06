@@ -23,6 +23,8 @@ public class PlainSaslMechanism : ISaslMechanism
     await _client.SaslCompleted();
     _client.StartBackgroundService();
     _client.ReadLock.Release();
+    
+    _client.UnregisterUnexpectedStanza<SaslSuccess>();
   }
 
   public async Task Use(XmppCredentials credentials)

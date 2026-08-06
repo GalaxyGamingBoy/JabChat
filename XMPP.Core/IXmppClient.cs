@@ -85,7 +85,13 @@ public interface IXmppClient
     RegisterUnexpectedStanzaResults.StanzaNamespaceMissing,
     RegisterUnexpectedStanzaResults.UnexpectedStanzaAlreadyRegistered
   > RegisterUnexpectedStanza<T>(Func<object, object?, Task> func);
-
+  
+  public OneOf<
+    Unit,
+    UnregisterUnexpectedStanzaResults.AmbiguousAttributeMatch,
+    UnregisterUnexpectedStanzaResults.StanzaNameMissing,
+    UnregisterUnexpectedStanzaResults.StanzaNamespaceMissing
+  > UnregisterUnexpectedStanza<T>();
 
   public OneOf<
     Unit,

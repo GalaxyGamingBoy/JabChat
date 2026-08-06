@@ -73,6 +73,13 @@ using RegisterUnexpectedStanzaResult = OneOf<
   RegisterUnexpectedStanzaResults.UnexpectedStanzaAlreadyRegistered
 >;
 
+using UnregisterUnexpectedStanzaResult = OneOf<
+  Unit,
+  UnregisterUnexpectedStanzaResults.AmbiguousAttributeMatch,
+  UnregisterUnexpectedStanzaResults.StanzaNameMissing,
+  UnregisterUnexpectedStanzaResults.StanzaNamespaceMissing
+>;
+
 using RegisterClientErrorResult = OneOf<
   Unit,
   RegisterClientErrorResults.AmbiguousAttributeMatch,
@@ -282,57 +289,70 @@ public class XmppClient : IXmppClient, IAsyncDisposable
 
   private async void SaslHandler(object? sender, StreamFeatureRequestedEventArgs args)
   {
-    if (args.Feature is not SaslFeature sasl)
-      return;
-
-    Console.WriteLine("Supported SASL mechanisms:");
-    sasl.Mechanisms.ForEach(Console.WriteLine);
-
-    foreach (var mechanism in SaslHandlers
-               .Where(mechanism
-                 => sasl.Mechanisms.Contains(mechanism.Value.Mechanism)))
+    try
     {
-      Console.WriteLine($"Using P{mechanism.Key}: {mechanism.Value.Mechanism}");
-      await mechanism.Value.Use(Credentials);
-      break;
+      if (args.Feature is not SaslFeature sasl)
+        return;
+
+      Console.WriteLine("Supported SASL mechanisms:");
+      sasl.Mechanisms.ForEach(Console.WriteLine);
+
+      foreach (var mechanism in SaslHandlers
+                 .Where(mechanism
+                   => sasl.Mechanisms.Contains(mechanism.Value.Mechanism)))
+      {
+        Console.WriteLine($"Using P{mechanism.Key}: {mechanism.Value.Mechanism}");
+        await mechanism.Value.Use(Credentials);
+        break;
+      }
+    }
+    catch (Exception)
+    {
+      // ignored
     }
   }
   
   private async void BindHandler(object? sender, StreamFeatureRequestedEventArgs args)
   {
-    if (args.Feature is not BindFeature)
-      return;
-
-    if (Credentials.Jid.Resource is null)
-      Credentials.Jid.Resource = Guid.NewGuid().ToString();
-
-    Console.WriteLine($"Binding to resource {Credentials.Jid.Resource}");
-    var query = new InfoQuery()
+    try
     {
-      Type = InfoQueryType.Set,
-      ResourceBind = new Bind()
+      if (args.Feature is not BindFeature)
+        return;
+
+      Credentials.Jid.Resource ??= Guid.NewGuid().ToString();
+
+      Console.WriteLine($"Binding to resource {Credentials.Jid.Resource}");
+      var query = new InfoQuery()
       {
-        Resource = Credentials.Jid.Resource,
+        Type = InfoQueryType.Set,
+        ResourceBind = new Bind()
+        {
+          Resource = Credentials.Jid.Resource,
+        }
+      };
+
+      var result = await SendInfoQueryAsync(query);
+      if (!result.IsT0)
+      {
+        InvokeClientError(new BindError(Credentials.Jid.Resource, (result.Value as IClientError)?.What()!));
+        return;
       }
-    };
 
-    var result = await SendInfoQueryAsync(query);
-    if (!result.IsT0)
-    {
-      InvokeClientError(new BindError(Credentials.Jid.Resource, (result.Value as IClientError)?.What()!));
-      return;
+      FullJid = new XmppJid()
+      {
+        LocalPart = Credentials.Jid.LocalPart,
+        DomainPart = Credentials.Jid.DomainPart,
+        Resource = Credentials.Jid.Resource,
+      };
+
+      Console.WriteLine($"XMPP Client Connected to JID {FullJid}");
+
+      XmppState = State.Connected;
     }
-
-    FullJid = new XmppJid()
+    catch (Exception)
     {
-      LocalPart = Credentials.Jid.LocalPart,
-      DomainPart = Credentials.Jid.DomainPart,
-      Resource = Credentials.Jid.Resource,
-    };
-
-    Console.WriteLine($"XMPP Client Connected to JID {FullJid}");
-
-    XmppState = State.Connected;
+      // ignored
+    }
   }
 
   public async Task<OpenXmppStreamResult> OpenXmppStream()
@@ -522,7 +542,6 @@ public class XmppClient : IXmppClient, IAsyncDisposable
     SaslHandlers[mech.Priority] = mech;
   }
 
-  // todo unexpected
   public RegisterUnexpectedStanzaResult RegisterUnexpectedStanza<T>(Func<object, object?, Task> func)
   {
     try
@@ -549,6 +568,28 @@ public class XmppClient : IXmppClient, IAsyncDisposable
     }
   }
 
+  public UnregisterUnexpectedStanzaResult UnregisterUnexpectedStanza<T>()
+  {
+    try
+    {
+      var attr = (XmlRootAttribute?)Attribute.GetCustomAttribute(
+        typeof(T), typeof(XmlRootAttribute));
+
+      if (attr?.ElementName == null)
+        return new UnregisterUnexpectedStanzaResults.StanzaNameMissing();
+      if (attr.Namespace == null)
+        return new UnregisterUnexpectedStanzaResults.StanzaNamespaceMissing();
+
+      var key = $"{attr.Namespace}/{attr.ElementName}";
+      UnexpectedStanzaSerializers.Remove(key);
+      return new Unit();
+    }
+    catch (AmbiguousMatchException)
+    {
+      return new UnregisterUnexpectedStanzaResults.AmbiguousAttributeMatch();
+    }
+  }
+  
   public RegisterClientErrorResult RegisterClientError<T>() where T : IClientError
   {
     try

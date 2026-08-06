@@ -116,6 +116,8 @@ public abstract class ScramPlusSaslMechanism : ISaslMechanism
 
     await _client.SendStanzaAsync(element);
     _client.ReadLock.Release();
+
+    _client.UnregisterUnexpectedStanza<ScramChallenge>();
   }
 
   private async Task OnSuccessReceived(object sender, object? successMessageReceived)
@@ -134,6 +136,8 @@ public abstract class ScramPlusSaslMechanism : ISaslMechanism
     await _client.SaslCompleted();
     _client.StartBackgroundService();
     _client.ReadLock.Release();
+    
+    _client.UnregisterUnexpectedStanza<SaslSuccess>();
   }
 
   public async Task Use(XmppCredentials credentials)
