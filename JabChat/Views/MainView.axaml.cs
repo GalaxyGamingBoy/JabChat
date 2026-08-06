@@ -12,20 +12,7 @@ public partial class MainView : UserControl
   public MainView()
   {
     InitializeComponent();
-    
     RegisterNavigator();
-    RegisterIntroWindowMessage();
-  }
-
-  public MainView(IServiceProvider provider)
-  {
-    InitializeComponent();
-    
-    WeakReferenceMessenger.Default.Register<MainView, FetchServiceProviderMessage>(this, (recipient, message) =>
-      message.Reply(provider));
-    
-    RegisterNavigator();
-    RegisterIntroWindowMessage();
   }
 
   protected override void OnLoaded(RoutedEventArgs e)
@@ -35,14 +22,6 @@ public partial class MainView : UserControl
     ((MainViewModel)DataContext!).CheckIntroSeen();
   }
   
-  private void RegisterIntroWindowMessage() => 
-    WeakReferenceMessenger.Default.Register<MainView, ShowIntroWindowMessage>(this, async (recipient, message) => 
-    { 
-      var prov = WeakReferenceMessenger.Default.Send<FetchServiceProviderMessage>();
-      var dialog = prov.Response.GetRequiredService<Pages.IntroPage>();
-      await Navigator.PushAsync(dialog);
-    });
-
   private void RegisterNavigator()
   {
     WeakReferenceMessenger.Default.Register<MainView, NavigatorPushMessage>(this, async (recipient, message) =>

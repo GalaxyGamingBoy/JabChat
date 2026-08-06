@@ -11,5 +11,15 @@
 
     <Application.Styles>
         <FluentTheme />
+        
+        <Style Selector="TextBlock.span">
+            <Setter Property="FontSize" Value="12"></Setter>
+            <Setter Property="Opacity" Value="0.6"></Setter>
+        </Style>
+        
+        <Style Selector="TextBlock.h1">
+            <Setter Property="FontSize" Value="24"></Setter>
+            <Setter Property="FontWeight" Value="Bold"></Setter>
+        </Style>
     </Application.Styles>
 </Application>

@@ -12,8 +12,5 @@ public partial class MainWindow : Window
   {
     InitializeComponent();
     DataContext = vm;
-    
-    WeakReferenceMessenger.Default.Register<MainWindow, FetchServiceProviderMessage>(this, (recipient, message) =>
-      message.Reply(provider));
   }
 }

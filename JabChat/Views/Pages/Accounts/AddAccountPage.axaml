@@ -1,0 +1,63 @@
+<ContentPage xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="using:App.ViewModels.Pages.Accounts"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="App.Views.Pages.Accounts.AddAccountPage"
+        x:DataType="vm:AddAccountViewModel"
+        Header="JabChat : Add Account"
+        NavigationPage.HasNavigationBar="False">
+    <DockPanel HorizontalAlignment="Center">
+        <StackPanel DockPanel.Dock="Top" Margin="0 12">
+            <TextBlock Classes="h1" HorizontalAlignment="Center">Connect your Account</TextBlock>
+            <TextBlock Classes="span" HorizontalAlignment="Center">Add your account information below to get started using JabChat</TextBlock>
+        </StackPanel>
+        
+        <StackPanel DockPanel.Dock="Bottom" Margin="0 4" HorizontalAlignment="Center">
+            <TextBlock Classes="span" HorizontalAlignment="Center" IsVisible="{Binding IsValidating}">Verifying the validity of the entered information...</TextBlock>
+            
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                <Button Margin=" 6 4" Command="{Binding CancelCommand}">Cancel</Button>
+                <Button Margin="6 4">Add Account</Button>
+            </StackPanel>
+        </StackPanel>
+        
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+            <StackPanel Orientation="Horizontal" Margin="0 4" Name="JidStackPanel">
+                <TextBox PlaceholderText="Username" Height="22" MaxWidth="196" MinWidth="112" HorizontalContentAlignment="Center"
+                         CornerRadius="6 0 0 6" BorderThickness="1 1 0 1"
+                         Text="{Binding Username}"></TextBox>
+                
+                <Border BorderThickness="0 1" BorderBrush="Black" Height="32">
+                    <TextBlock Margin="6 0" Height="22">@</TextBlock>
+                </Border>
+                
+                <TextBox PlaceholderText="Host" Height="22" MaxWidth="196" MinWidth="112" HorizontalContentAlignment="Center"
+                         CornerRadius="0 6 6 0" BorderThickness="0 1 1 1"
+                         Text="{Binding Host}"></TextBox>
+            </StackPanel>
+        
+            <!-- Limit Password Input to the width of the JID input -->
+            <TextBox PlaceholderText="Password" BorderThickness="1" CornerRadius="6" PasswordChar="*"
+                     MaxWidth="{Binding #JidStackPanel.Bounds.Width}"
+                     Text="{Binding Password}"></TextBox>
+            
+            <Expander Header="Advanced Settings" HorizontalAlignment="Stretch" Margin="0 6" MaxWidth="{Binding #JidStackPanel.Bounds.Width}">
+                <StackPanel>
+                    <TextBlock>Server Host</TextBlock>
+                    <TextBox Text="{Binding ServerHost}"></TextBox>
+                    
+                    <TextBlock Margin="0 6 0 0">Server Port</TextBlock>
+                    <TextBox Text="{Binding ServerPort}"></TextBox>
+                    
+                    <TextBlock Margin="0 6 0 0">Resource</TextBlock>
+                    <TextBox Text="{Binding Resource}"></TextBox>
+                    
+                    <TextBlock Margin="0 6 0 0">Force SSL</TextBlock>
+                    <CheckBox IsChecked="{Binding ForceSsl}"></CheckBox>
+                </StackPanel>
+            </Expander>
+        </StackPanel>
+    </DockPanel>
+</ContentPage>

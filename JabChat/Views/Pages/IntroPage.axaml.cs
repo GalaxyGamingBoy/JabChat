@@ -1,6 +1,7 @@
 using App.ViewModels;
 using Avalonia;
 using Avalonia.Controls;
+using IntroViewModel = App.ViewModels.Pages.IntroViewModel;
 
 namespace App.Views.Pages;
 

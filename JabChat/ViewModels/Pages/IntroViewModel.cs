@@ -1,13 +1,15 @@
 using System.Collections.ObjectModel;
 using App.Messages;
-using App.Services;
 using App.Settings;
+using App.ViewModels.Pages.Accounts;
+using App.Views.Pages.Accounts;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
+using Microsoft.Extensions.DependencyInjection;
 
-namespace App.ViewModels;
+namespace App.ViewModels.Pages;
 
 public partial class IntroViewModel : ViewModelBase, IDisposable
 {
@@ -23,12 +25,15 @@ public partial class IntroViewModel : ViewModelBase, IDisposable
   public IEnumerable<int> CarouselIndexes => Enumerable.Range(0, Carousels.Count);
 
   private readonly DispatcherTimer _timer = new DispatcherTimer();
-  
+
   private readonly AppSettings _settings;
+
+  private readonly IServiceProvider _provider;
   
-  public IntroViewModel(AppSettings settings)
+  public IntroViewModel(AppSettings settings, IServiceProvider provider)
   {
     _settings = settings;
+    _provider = provider;
     
     _timer.Interval = TimeSpan.FromSeconds(6);
     _timer.Tick += Timer_Tick;
@@ -41,7 +46,16 @@ public partial class IntroViewModel : ViewModelBase, IDisposable
   {
     _settings.SeenIntro = true;
     WeakReferenceMessenger.Default.Send<NavigatorPopAllMessage>();
-  } 
+  }
+
+  [RelayCommand]
+  private void Add()
+  {
+    // _settings.SeenIntro = true;
+
+    var page = _provider.GetRequiredService<AddAccountPage>();
+    WeakReferenceMessenger.Default.Send(new NavigatorPushMessage(page));
+  }
 
   public void StartCarousel() => _timer.Start();
   

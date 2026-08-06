@@ -4,26 +4,15 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="using:App.ViewModels"
         xmlns:lang="using:App.Lang"
+        xmlns:pages="clr-namespace:App.ViewModels.Pages"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="App.Views.Pages.IntroPage"
-        x:DataType="vm:IntroViewModel"
+        x:DataType="pages:IntroViewModel"
         Header="JabChat : Introduction"
         NavigationPage.HasNavigationBar="False">
     <Design.DataContext>
-        <vm:IntroViewModel />
+        <pages:IntroViewModel />
     </Design.DataContext>
-    
-    <ContentPage.Styles>
-        <Style Selector="TextBlock.span">
-            <Setter Property="FontSize" Value="12"></Setter>
-            <Setter Property="Opacity" Value="0.6"></Setter>
-        </Style>
-        
-        <Style Selector="TextBlock.h1">
-            <Setter Property="FontSize" Value="24"></Setter>
-            <Setter Property="FontWeight" Value="Bold"></Setter>
-        </Style>
-    </ContentPage.Styles>
     
     <DockPanel>
         <StackPanel DockPanel.Dock="Top" HorizontalAlignment="Center" Margin="0 8 0 0">
@@ -36,7 +25,7 @@
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                 <Button Margin="8 0" Command="{Binding LaterCommand}"
                         Content="{x:Static lang:Resources.IntroPage_Carousel_ButtonLater}" />
-                <Button Margin="8 0"
+                <Button Margin="8 0" Command="{Binding AddCommand}"
                         Content="{x:Static lang:Resources.IntroPage_Carousel_ButtonConnect}"/>
             </StackPanel>
         </StackPanel>

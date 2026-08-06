@@ -1,11 +1,14 @@
 using App.Services;
 using App.Settings;
 using App.ViewModels;
+using App.ViewModels.Pages.Accounts;
 using App.Views;
+using App.Views.Pages.Accounts;
 using FluentMigrator.Runner;
 using JabChat.Migrations;
 using Microsoft.Extensions.DependencyInjection;
 using IntroPage = App.Views.Pages.IntroPage;
+using IntroViewModel = App.ViewModels.Pages.IntroViewModel;
 
 namespace App;
 
@@ -13,16 +16,24 @@ public static class ServiceCollectionExtensions
 {
   public static void AddCommonServices(this IServiceCollection collection)
   {
+    // View Models
     collection.AddTransient<MainViewModel>();
     collection.AddTransient<IntroViewModel>();
+    collection.AddTransient<AddAccountViewModel>();
       
+    // Main UI
     collection.AddTransient<MainWindow>();
     collection.AddTransient<MainView>();
-    collection.AddTransient<IntroPage>();
     
+    // Pages
+    collection.AddTransient<IntroPage>();
+    collection.AddTransient<AddAccountPage>();
+    
+    // Services
     collection.AddSingleton<ISettingsService, SettingsService>();
     collection.AddTransient<IDatabaseConnection, DatabaseConnection>();
     
+    // Settings
     collection.AddSingleton<AppSettings>(s => s.GetRequiredService<ISettingsService>().Settings);
 
     collection
