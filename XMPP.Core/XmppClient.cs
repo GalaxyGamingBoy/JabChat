@@ -219,7 +219,7 @@ public class XmppClient : IXmppClient, IAsyncDisposable
     Backend = backend;
     Backend.UseClient(this);
     Backend.NetworkStreamUpdated += OnUpdatedNetworkStream;
-    StreamFeatureRequested += Backend.OnStreamFeatureRequested;
+    StreamFeatureAdvertised += Backend.OnStreamFeatureRequested;
 
     // Sasl Mechanisms
     RegisterSaslMechanism<PlainSaslMechanism>();
@@ -237,8 +237,8 @@ public class XmppClient : IXmppClient, IAsyncDisposable
     RegisterSaslMechanism<ScramSha3512PlusSaslMechanism>();
 
     // Internal Handlers
-    StreamFeatureRequested += SaslHandler;
-    StreamFeatureRequested += BindHandler;
+    StreamFeatureAdvertised += SaslHandler;
+    StreamFeatureAdvertised += BindHandler;
     ClientErrorRaised += OnStreamError;
   }
 
@@ -616,7 +616,7 @@ public class XmppClient : IXmppClient, IAsyncDisposable
     }
   }
 
-  public event EventHandler<StreamFeatureRequestedEventArgs>? StreamFeatureRequested;
+  public event EventHandler<StreamFeatureRequestedEventArgs>? StreamFeatureAdvertised;
   public event EventHandler<ClientErrorRaisedEventArgs>? ClientErrorRaised;
   public event EventHandler<OnMessageReceivedEventArgs>? OnMessageReceived;
 
@@ -732,7 +732,7 @@ public class XmppClient : IXmppClient, IAsyncDisposable
             FeatureSerializers.TryGetValue(sub.NamespaceURI, out var featureSerializer);
             var feature = featureSerializer?.Deserialize(sub);
             if (feature != null)
-              StreamFeatureRequested?.Invoke(this, new StreamFeatureRequestedEventArgs { Feature = feature });
+              StreamFeatureAdvertised?.Invoke(this, new StreamFeatureRequestedEventArgs { Feature = feature });
           }
 
         ReadLock.Release();
