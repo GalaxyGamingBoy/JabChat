@@ -17,6 +17,8 @@
     <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.2" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.9" />
     <PackageVersion Include="Xamarin.AndroidX.Core.SplashScreen" Version="1.0.1.15" />
+    <PackageVersion Include="Dapper" Version="2.1.79" />
+    <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.10" />
   </ItemGroup>
   <ItemGroup>
     <PackageVersion Include="DnsClient" Version="1.8.0" />
@@ -32,5 +34,9 @@
   <ItemGroup>
     <PackageVersion Include="Spectre.Console" Version="0.55.0" />
     <PackageVersion Include="System.CommandLine" Version="2.0.5" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageVersion Include="FluentMigrator" Version="8.0.1" />
+    <PackageVersion Include="FluentMigrator.Runner" Version="8.0.1" />
   </ItemGroup>
 </Project>

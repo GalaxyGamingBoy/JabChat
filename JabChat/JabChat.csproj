@@ -22,7 +22,13 @@
             <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
         </PackageReference>
         <PackageReference Include="CommunityToolkit.Mvvm" />
+        
         <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+        <PackageReference Include="Dapper" />
+        <PackageReference Include="Microsoft.Data.Sqlite" />
+        
+        <PackageReference Include="FluentMigrator.Runner" />
+        <ProjectReference Include="..\JabChat.Migrations\JabChat.Migrations.csproj" />
     </ItemGroup>
 
     <ItemGroup>
@@ -38,5 +44,17 @@
         <AutoGen>True</AutoGen>
         <DependentUpon>Resources.resx</DependentUpon>
       </Compile>
+      <Compile Update="Views\Pages\IntroPage.axaml.cs">
+        <DependentUpon>IntroWindow.axaml</DependentUpon>
+        <SubType>Code</SubType>
+      </Compile>
+      <Compile Update="Views\Pages\MainPage.axaml.cs">
+        <DependentUpon>MainPage.axaml</DependentUpon>
+        <SubType>Code</SubType>
+      </Compile>
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="Models\" />
     </ItemGroup>
 </Project>
