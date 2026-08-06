@@ -1,6 +1,7 @@
 using System.CommandLine;
 using Spectre.Console;
 using XMPP.Core;
+using XMPP.Core.ClientErrors;
 
 namespace Cli.Commands.Client;
 
@@ -46,7 +47,7 @@ public class ConnectCommand : Command
     var password = result.GetRequiredValue(_password);
     var resource = result.GetRequiredValue(_resource);
 
-    var client = await new XmppClientBuilder()
+    var clientResult = await new XmppClientBuilder()
       .UseHost(host)
       .UseBackend(backend)
       .UseUsername(username)
@@ -54,22 +55,23 @@ public class ConnectCommand : Command
       .UseResourceForBinding(resource)
       .BuildAsync();
 
-    if (client.IsFailed)
+    if (!clientResult.IsT0)
     {
       AnsiConsole.MarkupLine($"Error(s) occured while connecting to the XMPP host [yellow]{host}[/]");
-      foreach (var error in client.Errors)
-        AnsiConsole.MarkupLine($"[bold red]{error.Message}[/]");
+      IClientError error = (IClientError) clientResult.Value;
+      AnsiConsole.MarkupLine($"[bold red]{error.What()}[/]");
       
       return;
     }
 
-    client.Value.ClientErrorRaised += (_, err) =>
+    var client = (IXmppClient)clientResult.Value;
+    client.ClientErrorRaised += (_, err) =>
     {
       AnsiConsole.MarkupLine($"[bold red]ERR: {err.Error.What()}[/]");
     };
     
     AnsiConsole.MarkupLine($"Connecting to [yellow]{host}[/]... (Press any key to exit)");
-    await client.Value.ConnectAsync();
+    await client.ConnectAsync();
 
     Console.Read();
   }

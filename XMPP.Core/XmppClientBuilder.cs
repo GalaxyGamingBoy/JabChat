@@ -1,9 +1,17 @@
-using FluentResults;
+using OneOf;
 using XMPP.Core.Address;
 using XMPP.Core.Backend;
+using XMPP.Core.Errors;
 
 namespace XMPP.Core;
 
+using XmppClientBuilderResult = OneOf<
+  IXmppClient,
+  XmppClientBuilderResults.HostResolutionFailure,
+  XmppClientBuilderResults.UnspecifiedPassword,
+  XmppClientBuilderResults.UnspecifiedUsername
+>;
+  
 public class XmppClientBuilder
 {
   private string? _host;
@@ -17,7 +25,7 @@ public class XmppClientBuilder
   
   private bool _forceTls;
   
-  private XmppAddressProvider _addressProvider = new XmppAddressProvider();
+  private readonly XmppAddressProvider _addressProvider = new XmppAddressProvider();
 
   public XmppClientBuilder UseHost(string host)
   {
@@ -74,22 +82,22 @@ public class XmppClientBuilder
     return this;
   }
 
-  public async Task<Result<IXmppClient>> BuildAsync()
+  public async Task<XmppClientBuilderResult> BuildAsync()
   {
     if (_host is null)
-      return Result.Fail("Address or Host not specified.");
-    
+      return new XmppClientBuilderResults.HostResolutionFailure();
+
     if (_username is null)
-      return Result.Fail("Username not specified.");
-    
+      return new XmppClientBuilderResults.UnspecifiedUsername();
+
     if (_password is null)
-      return Result.Fail("Password not specified.");
+      return new XmppClientBuilderResults.UnspecifiedPassword();
     
     if (_address is null)
     {
       var address = await _addressProvider.GetAddressAsync(_host!);
       if (address is null)
-        return Result.Fail("No XMPP address was found");
+        return new XmppClientBuilderResults.HostResolutionFailure();
     
       _address = address;
     }
