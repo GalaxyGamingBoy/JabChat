@@ -51,7 +51,7 @@ public interface IXmppClient
 
   #endregion
 
-  #region Messsage Management
+  #region Message Management
 
   /// <summary>
   /// Sends a stanza element over the stream to the server
@@ -177,7 +177,7 @@ public interface IXmppClient
 
   #endregion
   
-  #region Callbacks
+  #region Event Handlers and Callbacks
   
   /// <summary>
   /// Raised when a stream feature is advertised by the server

@@ -91,33 +91,42 @@ using RegisterClientErrorResult = OneOf<
 
 public class XmppClient : IXmppClient, IAsyncDisposable
 {
-  public required XmppAddress Address { get; init; }
-  public required XmppCredentials Credentials { get; init; }
-
-  public XmppJid? FullJid { get; set; }
-
-  public IXmppClientBackend Backend { get; init; }
-
-  public XmppState State { get; private set; } = XmppState.Disconnected;
+  #region Internal Fields
 
   private Stream? _stream;
+  
   private XmlWriter? _writer;
-
+  
   private Dictionary<string, XmlSerializer> FeatureSerializers { get; } = new();
+  
   private Dictionary<string, XmlSerializer> ErrorSerializers { get; } = new();
+  
   private Dictionary<string, (XmlSerializer, Func<object, object?, Task>)> UnexpectedStanzaSerializers { get; } = new();
+  
   private SortedList<int, ISaslMechanism> SaslHandlers { get; } = new();
-
+  
   private Dictionary<string, TaskCompletionSource<InfoQuery>> InfoQueries { get; } = new();
 
   private CancellationTokenSource _cts = new();
+  
   private Task? BackgroundServiceHandler { get; set; }
+  
+  private XmppJid? FullJid { get; set; }
 
-  public void InvokeClientError(IClientError error) =>
-    ClientErrorRaised?.Invoke(this, new ClientErrorRaisedEventArgs() { Error = error });
+  private IXmppClientBackend Backend { get; init; }
+  
+  #endregion
 
-  public SemaphoreSlim ReadLock { get; } = new(1, 1);
-  private SemaphoreSlim WriteLock { get; } = new(1, 1);
+  #region Public Fields
+  
+  // ReSharper disable once MemberCanBePrivate.Global - Useful for applications
+  public XmppState State { get; set; } = XmppState.Disconnected;
+
+  public required XmppAddress Address { get; init; }
+  
+  public required XmppCredentials Credentials { get; init; }
+
+  #endregion
 
   public XmppClient(IXmppClientBackend backend)
   {
@@ -216,7 +225,7 @@ public class XmppClient : IXmppClient, IAsyncDisposable
     StreamFeatureAdvertised += BindHandler;
     ClientErrorRaised += OnStreamError;
   }
-
+  
   public async ValueTask DisposeAsync()
   {
     await Disconnect();
@@ -228,136 +237,9 @@ public class XmppClient : IXmppClient, IAsyncDisposable
 
     Backend.Dispose();
   }
-
-  private void OnUpdatedNetworkStream(object? sender, NetworkStreamUpdatedEventArgs args)
-  {
-    var stream = args.Stream;
-
-    if (stream is null)
-    {
-      // Cleanup network stuff
-      _writer?.Dispose();
-      _stream = null;
-      _writer = null;
-      return;
-    }
-
-    // Re-establish network stuff
-    _stream = stream;
-    _writer = XmlWriter.Create(_stream, new XmlWriterSettings
-    {
-      Async = true, CloseOutput = false, OmitXmlDeclaration = true, ConformanceLevel = ConformanceLevel.Auto
-    });
-  }
-
-  private async void OnStreamError(object? sender, ClientErrorRaisedEventArgs args)
-  {
-    try
-    {
-      await Disconnect();
-    }
-    catch (Exception)
-    {
-      // ignored
-    }
-  }
-
-  private async void SaslHandler(object? sender, StreamFeatureRequestedEventArgs args)
-  {
-    try
-    {
-      if (args.Feature is not SaslFeature sasl)
-        return;
-
-      Console.WriteLine("Supported SASL mechanisms:");
-      sasl.Mechanisms.ForEach(Console.WriteLine);
-
-      foreach (var mechanism in SaslHandlers
-                 .Where(mechanism
-                   => sasl.Mechanisms.Contains(mechanism.Value.Mechanism)))
-      {
-        Console.WriteLine($"Using P{mechanism.Key}: {mechanism.Value.Mechanism}");
-        await mechanism.Value.Use(Credentials);
-        break;
-      }
-    }
-    catch (Exception)
-    {
-      // ignored
-    }
-  }
   
-  private async void BindHandler(object? sender, StreamFeatureRequestedEventArgs args)
-  {
-    try
-    {
-      if (args.Feature is not BindFeature)
-        return;
+  #region Connection Management
 
-      var resource = Credentials.Jid.Resource ?? Guid.NewGuid().ToString();
-      Console.WriteLine($"Binding to resource {Credentials.Jid.Resource}");
-      
-      var query = new InfoQuery()
-      {
-        Type = InfoQueryType.Set,
-        ResourceBind = new Bind()
-        {
-          Resource = resource,
-        }
-      };
-
-      var result = await SendInfoQueryAsync(query);
-      if (!result.IsT0)
-      {
-        InvokeClientError(new BindError(resource, (result.Value as IClientError)?.What()!));
-        return;
-      }
-
-      FullJid = Credentials.Jid with { Resource = resource };
-
-      Console.WriteLine($"XMPP Client Connected to JID {FullJid}");
-
-      State = XmppState.Connected;
-    }
-    catch (Exception)
-    {
-      // ignored
-    }
-  }
-
-  public async Task<OpenXmppStreamResult> OpenXmppStream()
-  {
-    if (_stream is null)
-      return new OpenXmppStreamResults.StreamNullException();
-
-    var to = Address.Host.TrimEnd(".").ToString();
-
-    await WriteLock.WaitAsync();
-    _stream!.Write("<?xml version='1.0'?>"u8.ToArray());
-    _stream.Write(Encoding.UTF8.GetBytes(
-      $"<stream:stream from='{Credentials.Jid}' to='{to}' version='1.0' xml:lang='en' xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams'>\n"));
-    await _stream.FlushAsync();
-    WriteLock.Release();
-
-    State = XmppState.Negotiating;
-    return new Unit();
-  }
-
-  private async Task<CloseXmppStreamResult> CloseXmppStream()
-  {
-    if (_stream is null)
-      return new CloseXmppStreamResults.StreamNullException();
-
-    Console.WriteLine("Closing XMPP stream");
-
-    await WriteLock.WaitAsync();
-    await _stream!.WriteAsync("</stream:stream>"u8.ToArray());
-    await _stream.FlushAsync();
-    WriteLock.Release();
-
-    return new Unit();
-  }
-  
   public async Task<ConnectResult> ConnectAsync()
   {
     if (State != XmppState.Disconnected)
@@ -396,7 +278,7 @@ public class XmppClient : IXmppClient, IAsyncDisposable
 
     return new Unit();
   }
-
+  
   public async Task<DisconnectResult> DisconnectWithStreamCloseAsync()
   {
     var closeResult = await CloseXmppStream();
@@ -407,7 +289,7 @@ public class XmppClient : IXmppClient, IAsyncDisposable
     
     return await Disconnect();
   }
-
+  
   public async Task<ReconnectResult> ReconnectAsync()
   {
     if (State != XmppState.Disconnected)
@@ -425,7 +307,15 @@ public class XmppClient : IXmppClient, IAsyncDisposable
 
     return new Unit();
   }
+  
+  #endregion
 
+  #region Message Management
+
+  public SemaphoreSlim ReadLock { get; } = new(1, 1);
+  
+  private SemaphoreSlim WriteLock { get; } = new(1, 1);
+  
   public async Task<SendStanzaResult> SendStanzaAsync(object element)
   {
     if (_writer is null)
@@ -461,7 +351,7 @@ public class XmppClient : IXmppClient, IAsyncDisposable
 
     return new Unit();
   }
-
+  
   public async Task<SendInfoQueryResult> SendInfoQueryAsync(InfoQuery query)
   {
     var id = Guid.CreateVersion7().ToString();
@@ -482,6 +372,10 @@ public class XmppClient : IXmppClient, IAsyncDisposable
       return new SendInfoQueryResults.InfoQueryError(result.ToString());
     return result;
   }
+  
+  #endregion
+
+  #region Element Registrations
 
   public RegisterFeatureResult RegisterFeature<T>()
   {
@@ -503,13 +397,6 @@ public class XmppClient : IXmppClient, IAsyncDisposable
     {
       return new RegisterFeatureResults.AmbiguousAttributeMatch();
     }
-  }
-
-  public void RegisterSaslMechanism<T>() where T : ISaslMechanism, new()
-  {
-    var mech = new T();
-    mech.BindClient(this, Backend);
-    SaslHandlers[mech.Priority] = mech;
   }
 
   public RegisterUnexpectedStanzaResult RegisterUnexpectedStanza<T>(Func<object, object?, Task> func)
@@ -537,7 +424,7 @@ public class XmppClient : IXmppClient, IAsyncDisposable
       return new RegisterUnexpectedStanzaResults.AmbiguousAttributeMatch();
     }
   }
-
+  
   public UnregisterUnexpectedStanzaResult UnregisterUnexpectedStanza<T>()
   {
     try
@@ -585,15 +472,54 @@ public class XmppClient : IXmppClient, IAsyncDisposable
       return new RegisterClientErrorResults.AmbiguousAttributeMatch();
     }
   }
-
-  public event EventHandler<StreamFeatureRequestedEventArgs>? StreamFeatureAdvertised;
-  public event EventHandler<ClientErrorRaisedEventArgs>? ClientErrorRaised;
-  public event EventHandler<OnMessageReceivedEventArgs>? OnMessageReceived;
-
-  public async Task SaslCompleted()
+  
+  public void RegisterSaslMechanism<T>() where T : ISaslMechanism, new()
   {
-    await OpenXmppStream();
+    var mech = new T();
+    mech.BindClient(this, Backend);
+    SaslHandlers[mech.Priority] = mech;
   }
+  
+  #endregion
+
+  #region Stream Management
+
+  public async Task<OpenXmppStreamResult> OpenXmppStream()
+  {
+    if (_stream is null)
+      return new OpenXmppStreamResults.StreamNullException();
+
+    var to = Address.Host.TrimEnd(".").ToString();
+
+    await WriteLock.WaitAsync();
+    _stream!.Write("<?xml version='1.0'?>"u8.ToArray());
+    _stream.Write(Encoding.UTF8.GetBytes(
+      $"<stream:stream from='{Credentials.Jid}' to='{to}' version='1.0' xml:lang='en' xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams'>\n"));
+    await _stream.FlushAsync();
+    WriteLock.Release();
+
+    State = XmppState.Negotiating;
+    return new Unit();
+  }
+  
+  private async Task<CloseXmppStreamResult> CloseXmppStream()
+  {
+    if (_stream is null)
+      return new CloseXmppStreamResults.StreamNullException();
+
+    Console.WriteLine("Closing XMPP stream");
+
+    await WriteLock.WaitAsync();
+    await _stream!.WriteAsync("</stream:stream>"u8.ToArray());
+    await _stream.FlushAsync();
+    WriteLock.Release();
+
+    return new Unit();
+  }
+
+  #endregion
+
+  #region Background Service
 
   public void StartBackgroundService()
   {
@@ -608,22 +534,7 @@ public class XmppClient : IXmppClient, IAsyncDisposable
       await BackgroundServiceHandler;
     BackgroundServiceHandler = null;
   }
-
-  private List<IClientError> ParseStanzaErrors(List<XmlElement> errors)
-  {
-    var parsed =
-      errors.Select(element =>
-      {
-        ErrorSerializers.TryGetValue($"{element.NamespaceURI}/{element.Name}", out var errorSerializer);
-        using var reader = new XmlNodeReader(element);
-        return (IClientError?)errorSerializer?.Deserialize(reader);
-      }).Where(e => e != null).ToList();
-
-#pragma warning disable CS8619 // Nullability of reference types in value doesn't match target type.
-    return (List<IClientError>)parsed;
-#pragma warning restore CS8619 // Nullability of reference types in value doesn't match target type.
-  }
-
+  
   private async Task BackgroundService()
   {
     using var reader = XmlReader.Create(_stream!, new XmlReaderSettings
@@ -761,4 +672,139 @@ public class XmppClient : IXmppClient, IAsyncDisposable
       }
     }
   }
+  
+  #endregion
+  
+  #region Error Handling
+
+  public event EventHandler<ClientErrorRaisedEventArgs>? ClientErrorRaised;
+  
+  public void InvokeClientError(IClientError error) =>
+    ClientErrorRaised?.Invoke(this, new ClientErrorRaisedEventArgs() { Error = error });
+
+  private async void OnStreamError(object? sender, ClientErrorRaisedEventArgs args)
+  {
+    try
+    {
+      await Disconnect();
+    }
+    catch (Exception)
+    {
+      // ignored
+    }
+  }
+  
+  private List<IClientError> ParseStanzaErrors(List<XmlElement> errors)
+  {
+    var parsed =
+      errors.Select(element =>
+      {
+        ErrorSerializers.TryGetValue($"{element.NamespaceURI}/{element.Name}", out var errorSerializer);
+        using var reader = new XmlNodeReader(element);
+        return (IClientError?)errorSerializer?.Deserialize(reader);
+      }).Where(e => e != null).ToList();
+
+#pragma warning disable CS8619 // Nullability of reference types in value doesn't match target type.
+    return (List<IClientError>)parsed;
+#pragma warning restore CS8619 // Nullability of reference types in value doesn't match target type.
+  }
+  
+  #endregion
+  
+  #region Event Handlers and Callbacks
+
+  public event EventHandler<StreamFeatureRequestedEventArgs>? StreamFeatureAdvertised;
+  
+  public event EventHandler<OnMessageReceivedEventArgs>? OnMessageReceived;
+  
+  public async Task SaslCompleted()
+  {
+    await OpenXmppStream();
+  }
+  
+  private async void SaslHandler(object? sender, StreamFeatureRequestedEventArgs args)
+  {
+    try
+    {
+      if (args.Feature is not SaslFeature sasl)
+        return;
+
+      Console.WriteLine("Supported SASL mechanisms:");
+      sasl.Mechanisms.ForEach(Console.WriteLine);
+
+      foreach (var mechanism in SaslHandlers
+                 .Where(mechanism
+                   => sasl.Mechanisms.Contains(mechanism.Value.Mechanism)))
+      {
+        Console.WriteLine($"Using P{mechanism.Key}: {mechanism.Value.Mechanism}");
+        await mechanism.Value.Use(Credentials);
+        break;
+      }
+    }
+    catch (Exception)
+    {
+      // ignored
+    }
+  }
+
+  private async void BindHandler(object? sender, StreamFeatureRequestedEventArgs args)
+  {
+    try
+    {
+      if (args.Feature is not BindFeature)
+        return;
+
+      var resource = Credentials.Jid.Resource ?? Guid.NewGuid().ToString();
+      Console.WriteLine($"Binding to resource {Credentials.Jid.Resource}");
+      
+      var query = new InfoQuery()
+      {
+        Type = InfoQueryType.Set,
+        ResourceBind = new Bind()
+        {
+          Resource = resource,
+        }
+      };
+
+      var result = await SendInfoQueryAsync(query);
+      if (!result.IsT0)
+      {
+        InvokeClientError(new BindError(resource, (result.Value as IClientError)?.What()!));
+        return;
+      }
+
+      FullJid = Credentials.Jid with { Resource = resource };
+
+      Console.WriteLine($"XMPP Client Connected to JID {FullJid}");
+
+      State = XmppState.Connected;
+    }
+    catch (Exception)
+    {
+      // ignored
+    }
+  }
+  
+  private void OnUpdatedNetworkStream(object? sender, NetworkStreamUpdatedEventArgs args)
+  {
+    var stream = args.Stream;
+
+    if (stream is null)
+    {
+      // Cleanup network stuff
+      _writer?.Dispose();
+      _stream = null;
+      _writer = null;
+      return;
+    }
+
+    // Re-establish network stuff
+    _stream = stream;
+    _writer = XmlWriter.Create(_stream, new XmlWriterSettings
+    {
+      Async = true, CloseOutput = false, OmitXmlDeclaration = true, ConformanceLevel = ConformanceLevel.Auto
+    });
+  }
+  
+  #endregion
 }
