@@ -1,4 +1,4 @@
-namespace XMPP.Core;
+namespace XMPP.Core.Backend;
 
 public enum XmppBackend
 {

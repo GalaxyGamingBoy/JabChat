@@ -2,6 +2,7 @@ using OneOf;
 using Org.BouncyCastle.Tls;
 using XMPP.Core.Address;
 using XMPP.Core.Errors;
+using XMPP.Core.EventArgs;
 
 namespace XMPP.Core.Backend;
 

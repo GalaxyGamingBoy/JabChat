@@ -1,7 +1,8 @@
 using System.CommandLine;
 using Spectre.Console;
 using XMPP.Core;
-using XMPP.Core.ClientErrors;
+using XMPP.Core.Backend;
+using XMPP.Core.Errors;
 
 namespace Cli.Commands.Client;
 

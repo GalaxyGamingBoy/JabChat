@@ -1,7 +1,7 @@
 using System.Xml.Serialization;
 using XMPP.Core.StanzaErrors;
 
-namespace XMPP.Core;
+namespace XMPP.Core.Messages;
 
 [XmlRoot("message", Namespace = "jabber:client")]
 public record Message

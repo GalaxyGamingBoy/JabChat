@@ -7,10 +7,11 @@ using System.Xml.Serialization;
 using OneOf;
 using XMPP.Core.Address;
 using XMPP.Core.Backend;
-using XMPP.Core.ClientErrors;
 using XMPP.Core.Errors;
+using XMPP.Core.EventArgs;
 using XMPP.Core.Features;
 using XMPP.Core.InfoQueries;
+using XMPP.Core.Messages;
 using XMPP.Core.SaslMechanisms;
 
 namespace XMPP.Core;
@@ -90,32 +91,6 @@ using RegisterClientErrorResult = OneOf<
 
 public class XmppClient : IXmppClient, IAsyncDisposable
 {
-  /// <summary>
-  /// XMPP Client State
-  /// </summary>
-  public enum State
-  {
-    /// <summary>
-    /// There is no active socket connection to an XMPP host
-    /// </summary>
-    Disconnected,
-
-    /// <summary>
-    /// There is an active socket connection to an XMPP host, but stream negotiation hasn't started yet
-    /// </summary>
-    SocketConnected,
-
-    /// <summary>
-    /// There is an active XMPP stream negotiation
-    /// </summary>
-    Negotiating,
-
-    /// <summary>
-    /// The XMPP stream has been established, no actions pending
-    /// </summary>
-    Connected,
-  }
-
   public required XmppAddress Address { get; init; }
   public required XmppCredentials Credentials { get; init; }
 
@@ -123,7 +98,7 @@ public class XmppClient : IXmppClient, IAsyncDisposable
 
   public IXmppClientBackend Backend { get; init; }
 
-  public State XmppState { get; private set; } = State.Disconnected;
+  public XmppState State { get; private set; } = XmppState.Disconnected;
 
   private Stream? _stream;
   private XmlWriter? _writer;
@@ -319,35 +294,30 @@ public class XmppClient : IXmppClient, IAsyncDisposable
       if (args.Feature is not BindFeature)
         return;
 
-      Credentials.Jid.Resource ??= Guid.NewGuid().ToString();
-
+      var resource = Credentials.Jid.Resource ?? Guid.NewGuid().ToString();
       Console.WriteLine($"Binding to resource {Credentials.Jid.Resource}");
+      
       var query = new InfoQuery()
       {
         Type = InfoQueryType.Set,
         ResourceBind = new Bind()
         {
-          Resource = Credentials.Jid.Resource,
+          Resource = resource,
         }
       };
 
       var result = await SendInfoQueryAsync(query);
       if (!result.IsT0)
       {
-        InvokeClientError(new BindError(Credentials.Jid.Resource, (result.Value as IClientError)?.What()!));
+        InvokeClientError(new BindError(resource, (result.Value as IClientError)?.What()!));
         return;
       }
 
-      FullJid = new XmppJid()
-      {
-        LocalPart = Credentials.Jid.LocalPart,
-        DomainPart = Credentials.Jid.DomainPart,
-        Resource = Credentials.Jid.Resource,
-      };
+      FullJid = Credentials.Jid with { Resource = resource };
 
       Console.WriteLine($"XMPP Client Connected to JID {FullJid}");
 
-      XmppState = State.Connected;
+      State = XmppState.Connected;
     }
     catch (Exception)
     {
@@ -369,7 +339,7 @@ public class XmppClient : IXmppClient, IAsyncDisposable
     await _stream.FlushAsync();
     WriteLock.Release();
 
-    XmppState = State.Negotiating;
+    State = XmppState.Negotiating;
     return new Unit();
   }
 
@@ -390,7 +360,7 @@ public class XmppClient : IXmppClient, IAsyncDisposable
   
   public async Task<ConnectResult> ConnectAsync()
   {
-    if (XmppState != State.Disconnected)
+    if (State != XmppState.Disconnected)
       return new ConnectResults.ClientAlreadyConnected();
 
     var backendConnectResult = await Backend.ConnectAsync(Address);
@@ -401,7 +371,7 @@ public class XmppClient : IXmppClient, IAsyncDisposable
         _ => new ConnectResults.ClientAlreadyConnected(),
         _ => new ConnectResults.ConnectionFailure());
     
-    XmppState = State.SocketConnected;
+    State = XmppState.SocketConnected;
     
     var streamResult = await OpenXmppStream();
     if (!streamResult.IsT0)
@@ -416,12 +386,12 @@ public class XmppClient : IXmppClient, IAsyncDisposable
 
   public async Task<DisconnectResult> Disconnect()
   {
-    if (XmppState == State.Disconnected)
+    if (State == XmppState.Disconnected)
       return new DisconnectResults.AlreadyDisconnected();
 
     await StopBackgroundService();
 
-    XmppState = State.Disconnected;
+    State = XmppState.Disconnected;
     Backend.Disconnect();
 
     return new Unit();
@@ -440,7 +410,7 @@ public class XmppClient : IXmppClient, IAsyncDisposable
 
   public async Task<ReconnectResult> ReconnectAsync()
   {
-    if (XmppState != State.Disconnected)
+    if (State != XmppState.Disconnected)
       return new ReconnectResults.ClientAlreadyConnected();
 
     await DisconnectWithStreamCloseAsync();

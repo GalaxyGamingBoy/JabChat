@@ -1,5 +1,3 @@
-using XMPP.Core.ClientErrors;
-
 namespace XMPP.Core.Errors;
 
 public static class ConnectResults

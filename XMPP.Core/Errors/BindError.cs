@@ -1,4 +1,4 @@
-namespace XMPP.Core.ClientErrors;
+namespace XMPP.Core.Errors;
 
 public record BindError(string Resource, string Error) : IClientError
 {

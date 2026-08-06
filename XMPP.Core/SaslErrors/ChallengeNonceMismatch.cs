@@ -1,4 +1,4 @@
-using XMPP.Core.ClientErrors;
+using XMPP.Core.Errors;
 
 namespace XMPP.Core.SaslErrors;
 

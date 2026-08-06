@@ -102,12 +102,7 @@ public class XmppClientBuilder
       _address = address;
     }
 
-    var jid = new XmppJid()
-    {
-      LocalPart = _username,
-      DomainPart = _host,
-      Resource = _resource
-    };
+    var jid = new XmppJid(_username, _host, _resource);
 
     return new XmppClient(GetBackend())
     {

@@ -1,6 +1,6 @@
 using System.Xml;
 using System.Xml.Serialization;
-using XMPP.Core.ClientErrors;
+using XMPP.Core.Errors;
 
 namespace XMPP.Core.StanzaErrors;
 

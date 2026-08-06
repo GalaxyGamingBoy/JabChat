@@ -1,11 +1,7 @@
 namespace XMPP.Core;
 
-public record XmppJid
+public record XmppJid(string LocalPart, string DomainPart, string? Resource)
 {
-  public required string LocalPart;
-  public required string DomainPart;
-  public string? Resource;
-
   public override string ToString()
   {
     return Resource is not null

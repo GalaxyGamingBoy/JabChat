@@ -1,5 +1,3 @@
-using XMPP.Core.ClientErrors;
-
 namespace XMPP.Core.Errors;
 
 public record Unit : IClientError

@@ -3,6 +3,8 @@ using OneOf;
 using Org.BouncyCastle.Tls;
 using XMPP.Core.Address;
 using XMPP.Core.Errors;
+using XMPP.Core.EventArgs;
+using XMPP.Core.StartTls;
 
 namespace XMPP.Core.Backend;
 
@@ -63,7 +65,7 @@ public class TcpXmppBackend(bool forceTls) : IXmppClientBackend
     try
     {
       if (Client is not null || Stream is not null)
-        return new BackendConnectResults.AddressPortInvalid();
+        return new BackendConnectResults.ClientAlreadyConnected();
 
       Client = new TcpClient();
       ConnectedHost = address.Host.TrimEnd(".").ToString();

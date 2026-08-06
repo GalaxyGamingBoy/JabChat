@@ -1,7 +1,7 @@
 using System.Xml.Linq;
 using OneOf;
-using XMPP.Core.ClientErrors;
 using XMPP.Core.Errors;
+using XMPP.Core.EventArgs;
 using XMPP.Core.InfoQueries;
 using XMPP.Core.SaslMechanisms;
 

@@ -1,7 +1,5 @@
 using System.Collections.Immutable;
 using System.Security.Cryptography.X509Certificates;
-using Org.BouncyCastle.Asn1;
-using Org.BouncyCastle.Asn1.X509;
 using Org.BouncyCastle.Pkix;
 using Org.BouncyCastle.Tls;
 using Org.BouncyCastle.Utilities.Collections;
@@ -9,7 +7,7 @@ using Org.BouncyCastle.X509;
 using Org.BouncyCastle.X509.Store;
 using CertificateRequest = Org.BouncyCastle.Tls.CertificateRequest;
 
-namespace XMPP.Core;
+namespace XMPP.Core.StartTls;
 
 public class XmppTlsAuthentication(string host) : TlsAuthentication
 {

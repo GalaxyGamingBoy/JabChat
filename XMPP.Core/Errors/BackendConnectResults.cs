@@ -1,13 +1,4 @@
-using XMPP.Core.ClientErrors;
-
 namespace XMPP.Core.Errors;
-
-// public enum BackendConnectResults
-// {
-  // ClientAlreadyConnected,
-  // AddressPortInvalid,
-  // ConnectionFailure
-// }
 
 public static class BackendConnectResults
 {

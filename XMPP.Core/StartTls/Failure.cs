@@ -1,5 +1,5 @@
 using System.Xml.Serialization;
-using XMPP.Core.ClientErrors;
+using XMPP.Core.Errors;
 using XMPP.Core.StreamErrors;
 
 namespace XMPP.Core.StartTls;
