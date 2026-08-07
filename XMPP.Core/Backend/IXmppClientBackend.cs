@@ -44,7 +44,7 @@ public interface IXmppClientBackend : IDisposable
   /// </summary>
   /// <param name="sender">event sender</param>
   /// <param name="eventArgs">stream features received</param>
-  void OnStreamFeatureRequested(object? sender, StreamFeatureRequestedEventArgs eventArgs);
+  void OnStreamFeatureAdvertised(object? sender, StreamFeatureRequestedEventArgs eventArgs);
   #endregion
 
   #region SASL

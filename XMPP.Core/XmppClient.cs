@@ -93,9 +93,13 @@ public class XmppClient : IXmppClient, IAsyncDisposable
 {
   #region Internal Fields
 
-  private Stream? _stream;
+  private Stream? Stream { get; set; }
   
-  private XmlWriter? _writer;
+  private XmlWriter? Writer {  get; set; }
+  
+  private Dictionary<string, TaskCompletionSource<InfoQuery>> InfoQueries { get; } = new();
+  
+  private SortedList<int, ISaslMechanism> SaslHandlers { get; } = new();
   
   private Dictionary<string, XmlSerializer> FeatureSerializers { get; } = new();
   
@@ -103,11 +107,7 @@ public class XmppClient : IXmppClient, IAsyncDisposable
   
   private Dictionary<string, (XmlSerializer, Func<object, object?, Task>)> UnexpectedStanzaSerializers { get; } = new();
   
-  private SortedList<int, ISaslMechanism> SaslHandlers { get; } = new();
-  
-  private Dictionary<string, TaskCompletionSource<InfoQuery>> InfoQueries { get; } = new();
-
-  private CancellationTokenSource _cts = new();
+  private CancellationTokenSource _backgroundServiceTokenSource = new();
   
   private Task? BackgroundServiceHandler { get; set; }
   
@@ -203,7 +203,7 @@ public class XmppClient : IXmppClient, IAsyncDisposable
     Backend = backend;
     Backend.UseClient(this);
     Backend.NetworkStreamUpdated += OnUpdatedNetworkStream;
-    StreamFeatureAdvertised += Backend.OnStreamFeatureRequested;
+    StreamFeatureAdvertised += Backend.OnStreamFeatureAdvertised;
 
     // Sasl Mechanisms
     RegisterSaslMechanism<PlainSaslMechanism>();
@@ -228,13 +228,16 @@ public class XmppClient : IXmppClient, IAsyncDisposable
   
   public async ValueTask DisposeAsync()
   {
-    await Disconnect();
+    await DisconnectWithStreamCloseAsync();
 
-    await _cts.CancelAsync();
+    await _backgroundServiceTokenSource.CancelAsync();
     if (BackgroundServiceHandler != null) await BackgroundServiceHandler;
+    
+    Backend.NetworkStreamUpdated -= OnUpdatedNetworkStream;
+    StreamFeatureAdvertised -= Backend.OnStreamFeatureAdvertised;
 
-    if (_writer != null) await _writer.DisposeAsync();
-
+    if (Writer != null) await Writer.DisposeAsync();
+    
     Backend.Dispose();
   }
   
@@ -318,7 +321,7 @@ public class XmppClient : IXmppClient, IAsyncDisposable
   
   public async Task<SendStanzaResult> SendStanzaAsync(object element)
   {
-    if (_writer is null)
+    if (Writer is null)
       return new SendStanzaResults.WriterNullException();
 
     await WriteLock.WaitAsync();
@@ -326,14 +329,14 @@ public class XmppClient : IXmppClient, IAsyncDisposable
 
     try
     {
-      serializer.Serialize(_writer!, element);
+      serializer.Serialize(Writer!, element);
     }
     catch (InvalidOperationException)
     {
       return new SendStanzaResults.SerializationFailure();
     }
     
-    await _writer!.FlushAsync();
+    await Writer!.FlushAsync();
     WriteLock.Release();
 
     return new Unit();
@@ -341,12 +344,12 @@ public class XmppClient : IXmppClient, IAsyncDisposable
 
   public async Task<SendStanzaResult> SendStanzaAsync(XElement element)
   {
-    if (_writer is null)
+    if (Writer is null)
       return new SendStanzaResults.WriterNullException();
 
     await WriteLock.WaitAsync();
-    element.WriteTo(_writer);
-    await _writer.FlushAsync();
+    element.WriteTo(Writer);
+    await Writer.FlushAsync();
     WriteLock.Release();
 
     return new Unit();
@@ -486,16 +489,16 @@ public class XmppClient : IXmppClient, IAsyncDisposable
 
   public async Task<OpenXmppStreamResult> OpenXmppStream()
   {
-    if (_stream is null)
+    if (Stream is null)
       return new OpenXmppStreamResults.StreamNullException();
 
     var to = Address.Host.TrimEnd(".").ToString();
 
     await WriteLock.WaitAsync();
-    _stream!.Write("<?xml version='1.0'?>"u8.ToArray());
-    _stream.Write(Encoding.UTF8.GetBytes(
+    Stream!.Write("<?xml version='1.0'?>"u8.ToArray());
+    Stream.Write(Encoding.UTF8.GetBytes(
       $"<stream:stream from='{Credentials.Jid}' to='{to}' version='1.0' xml:lang='en' xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams'>\n"));
-    await _stream.FlushAsync();
+    await Stream.FlushAsync();
     WriteLock.Release();
 
     State = XmppState.Negotiating;
@@ -504,14 +507,14 @@ public class XmppClient : IXmppClient, IAsyncDisposable
   
   private async Task<CloseXmppStreamResult> CloseXmppStream()
   {
-    if (_stream is null)
+    if (Stream is null)
       return new CloseXmppStreamResults.StreamNullException();
 
     Console.WriteLine("Closing XMPP stream");
 
     await WriteLock.WaitAsync();
-    await _stream!.WriteAsync("</stream:stream>"u8.ToArray());
-    await _stream.FlushAsync();
+    await Stream!.WriteAsync("</stream:stream>"u8.ToArray());
+    await Stream.FlushAsync();
     WriteLock.Release();
 
     return new Unit();
@@ -519,17 +522,102 @@ public class XmppClient : IXmppClient, IAsyncDisposable
 
   #endregion
 
+  #region Readers
+
+  private async Task ReadStreamFeatures(XmlReader reader)
+  {
+    using var sub = reader.ReadSubtree();
+    await sub.ReadAsync(); // Skip Header
+
+    while (await sub.ReadAsync())
+      if (sub is { NodeType: XmlNodeType.Element, Depth: 1 })
+      {
+        Console.WriteLine($"F> {sub.Name}: {sub.NamespaceURI}");
+        FeatureSerializers.TryGetValue(sub.NamespaceURI, out var featureSerializer);
+        var feature = featureSerializer?.Deserialize(sub);
+        if (feature != null)
+          StreamFeatureAdvertised?.Invoke(this, new StreamFeatureRequestedEventArgs { Feature = feature });
+      }
+
+    ReadLock.Release();
+  }
+  
+  private readonly XmlSerializer _infoQuerySerializer = new(typeof(InfoQuery));
+
+  private void ReadInfoQuery(XmlReader reader)
+  {
+    ReadLock.Release();
+
+    using var sub = reader.ReadSubtree();
+    var infoQuery = (InfoQuery?)_infoQuerySerializer.Deserialize(sub);
+    if (infoQuery == null)
+      return;
+
+    infoQuery.StanzaError?.Errors = ParseStanzaErrors(infoQuery.StanzaError.InternalErrors);
+
+    InfoQueries.TryGetValue(infoQuery.Id!, out var infoQueryTaskSource);
+    infoQueryTaskSource?.TrySetResult(infoQuery);
+  }
+  
+  private readonly XmlSerializer _messageSerializer = new(typeof(Message));
+
+  private void ReadMessage(XmlReader reader)
+  {
+    ReadLock.Release();
+    
+    using var sub = reader.ReadSubtree();
+    var message = (Message?)_messageSerializer.Deserialize(sub);
+    
+    if (message == null) return;
+    
+    if (message.StanzaError is not null)
+    {
+      var errors = ParseStanzaErrors(message.StanzaError.InternalErrors);
+      message.StanzaError.Errors = errors;
+    }
+
+    OnMessageReceived?.Invoke(this, new OnMessageReceivedEventArgs { Message = message });
+  }
+
+  private void ReadUnexpectedStanza(XmlReader reader)
+  {
+    using var sub = reader.ReadSubtree();
+    var found = UnexpectedStanzaSerializers.TryGetValue($"{reader.NamespaceURI}/{reader.Name}",
+      out var stanzaSerializer);
+
+    if (!found)
+    {
+      ReadLock.Release();
+      return;
+    }
+
+    var stanza = stanzaSerializer.Item1.Deserialize(sub);
+    _ = Task.Run(() => stanzaSerializer.Item2.Invoke(this, stanza));
+  }
+
+  private async Task<IClientError?> ReadSingleError(XmlReader reader)
+  {
+    using var sub = reader.ReadSubtree();
+    await sub.ReadAsync(); // Skip Header
+    await sub.ReadAsync(); // Read first error
+
+    ErrorSerializers.TryGetValue($"{sub.NamespaceURI}/{sub.Name}", out var errorSerializer);
+    return errorSerializer?.Deserialize(sub) as IClientError;
+  }
+
+  #endregion
+  
   #region Background Service
 
   public void StartBackgroundService()
   {
-    _cts = new CancellationTokenSource();
+    _backgroundServiceTokenSource = new CancellationTokenSource();
     BackgroundServiceHandler = Task.Run(BackgroundService);
   }
 
   public async Task StopBackgroundService()
   {
-    await _cts.CancelAsync();
+    await _backgroundServiceTokenSource.CancelAsync();
     if (BackgroundServiceHandler != null)
       await BackgroundServiceHandler;
     BackgroundServiceHandler = null;
@@ -537,21 +625,18 @@ public class XmppClient : IXmppClient, IAsyncDisposable
   
   private async Task BackgroundService()
   {
-    using var reader = XmlReader.Create(_stream!, new XmlReaderSettings
+    using var reader = XmlReader.Create(Stream!, new XmlReaderSettings
     {
       Async = true, IgnoreProcessingInstructions = true, IgnoreWhitespace = true, IgnoreComments = true,
       CloseInput = false
     });
 
-    var infoQuerySerializer = new XmlSerializer(typeof(InfoQuery));
-    var messageSerializer = new XmlSerializer(typeof(Message));
-
-    while (!_cts.IsCancellationRequested)
+    while (!_backgroundServiceTokenSource.IsCancellationRequested)
     {
-      // Await ReadLock approval
+      // await ReadLock approval
       try
       {
-        await ReadLock.WaitAsync(_cts.Token);
+        await ReadLock.WaitAsync(_backgroundServiceTokenSource.Token);
       }
       catch (OperationCanceledException)
       {
@@ -566,109 +651,31 @@ public class XmppClient : IXmppClient, IAsyncDisposable
         ReadLock.Release();
         continue;
       }
-
-      if (reader.Name == "stream:stream")
+      
+      switch (reader.Name)
       {
-        ReadLock.Release();
-        continue;
-      }
-
-      if (reader.Name == "stream:error")
-      {
-        using var sub = reader.ReadSubtree();
-        await sub.ReadAsync();
-        await sub.ReadAsync();
-
-        ErrorSerializers.TryGetValue($"{sub.NamespaceURI}/{sub.Name}", out var errorSerializer);
-        var error = errorSerializer?.Deserialize(sub);
-        if (error != null)
-          ClientErrorRaised?.Invoke(this, new ClientErrorRaisedEventArgs() { Error = (IClientError)error });
-
-        break;
-      }
-
-      if (reader is { Name: "failure", NamespaceURI: "urn:ietf:params:xml:ns:xmpp-sasl" })
-      {
-        using var sub = reader.ReadSubtree();
-        await sub.ReadAsync();
-        await sub.ReadAsync();
-
-        ErrorSerializers.TryGetValue($"{sub.NamespaceURI}/{sub.Name}", out var errorSerializer);
-        var error = errorSerializer?.Deserialize(sub);
-        if (error != null)
-          ClientErrorRaised?.Invoke(this, new ClientErrorRaisedEventArgs() { Error = (IClientError)error });
-
-        break;
-      }
-
-      if (reader.Name == "stream:features")
-      {
-        using var sub = reader.ReadSubtree();
-        await sub.ReadAsync();
-
-        while (await sub.ReadAsync())
-          if (sub is { NodeType: XmlNodeType.Element, Depth: 1 })
-          {
-            Console.WriteLine($"F> {sub.Name}: {sub.NamespaceURI}");
-            FeatureSerializers.TryGetValue(sub.NamespaceURI, out var featureSerializer);
-            var feature = featureSerializer?.Deserialize(sub);
-            if (feature != null)
-              StreamFeatureAdvertised?.Invoke(this, new StreamFeatureRequestedEventArgs { Feature = feature });
-          }
-
-        ReadLock.Release();
-        continue;
-      }
-
-      if (reader.Name == "iq")
-      {
-        using var sub = reader.ReadSubtree();
-        var infoQuery = (InfoQuery?)infoQuerySerializer.Deserialize(sub);
-        if (infoQuery != null)
-        {
-          if (infoQuery.StanzaError is not null)
-          {
-            var errors = ParseStanzaErrors(infoQuery.StanzaError.InternalErrors);
-            infoQuery.StanzaError.Errors = errors;
-          }
-
-          InfoQueries.TryGetValue(infoQuery.Id!, out var infoQueryTaskSource);
-          infoQueryTaskSource?.TrySetResult(infoQuery);
-        }
-
-        ReadLock.Release();
-        continue;
-      }
-
-      if (reader.Name == "message")
-      {
-        using var sub = reader.ReadSubtree();
-        var message = (Message?)messageSerializer.Deserialize(sub);
-        if (message != null)
-        {
-          if (message.StanzaError is not null)
-          {
-            var errors = ParseStanzaErrors(message.StanzaError.InternalErrors);
-            message.StanzaError.Errors = errors;
-          }
-
-          OnMessageReceived?.Invoke(this, new OnMessageReceivedEventArgs { Message = message });
-        }
-      }
-
-      {
-        using var sub = reader.ReadSubtree();
-        var found = UnexpectedStanzaSerializers.TryGetValue($"{reader.NamespaceURI}/{reader.Name}",
-          out var stanzaSerializer);
-
-        if (!found)
-        {
+        case "stream:stream":
           ReadLock.Release();
-          continue;
-        }
-
-        var stanza = stanzaSerializer.Item1.Deserialize(sub);
-        _ = Task.Run(() => stanzaSerializer.Item2.Invoke(this, stanza));
+          break;
+        case "stream:features":
+          await ReadStreamFeatures(reader);
+          break;
+        case "stream:error":
+          InvokeClientError(await ReadSingleError(reader) ?? new GenericError());
+          break;
+        case "failure":
+          if (reader.NamespaceURI == "urn:ietf:params:xml:ns:xmpp-sasl")
+            InvokeClientError(await ReadSingleError(reader) ?? new GenericError());
+          break;
+        case "iq":
+          ReadInfoQuery(reader);
+          break;
+        case "message":
+          ReadMessage(reader);
+          break;
+        default:
+          ReadUnexpectedStanza(reader);
+          break;
       }
     }
   }
@@ -687,6 +694,9 @@ public class XmppClient : IXmppClient, IAsyncDisposable
     try
     {
       await Disconnect();
+
+      await StopBackgroundService();
+      StartBackgroundService();
     }
     catch (Exception)
     {
@@ -732,14 +742,12 @@ public class XmppClient : IXmppClient, IAsyncDisposable
       Console.WriteLine("Supported SASL mechanisms:");
       sasl.Mechanisms.ForEach(Console.WriteLine);
 
-      foreach (var mechanism in SaslHandlers
-                 .Where(mechanism
-                   => sasl.Mechanisms.Contains(mechanism.Value.Mechanism)))
-      {
-        Console.WriteLine($"Using P{mechanism.Key}: {mechanism.Value.Mechanism}");
-        await mechanism.Value.Use(Credentials);
-        break;
-      }
+      var commonMechanisms = SaslHandlers
+        .Where(mech => sasl.Mechanisms.Contains(mech.Value.Mechanism));
+      
+      var mechanism = commonMechanisms.First(); 
+      Console.WriteLine($"Using P{mechanism.Key}: {mechanism.Value.Mechanism}");
+      await mechanism.Value.Use(Credentials);
     }
     catch (Exception)
     {
@@ -773,8 +781,16 @@ public class XmppClient : IXmppClient, IAsyncDisposable
         return;
       }
 
-      FullJid = Credentials.Jid with { Resource = resource };
+      var iq = result.AsT0;
 
+
+      if (iq.Type == InfoQueryType.Error)
+      {
+        var errors = iq.StanzaError!.Errors.Select(e => e.What());
+        InvokeClientError(new BindError(resource, string.Join(Environment.NewLine, errors)));
+      }
+
+      FullJid = Credentials.Jid with { Resource = iq.ResourceBind!.Resource };
       Console.WriteLine($"XMPP Client Connected to JID {FullJid}");
 
       State = XmppState.Connected;
@@ -787,23 +803,17 @@ public class XmppClient : IXmppClient, IAsyncDisposable
   
   private void OnUpdatedNetworkStream(object? sender, NetworkStreamUpdatedEventArgs args)
   {
+    // todo: no need to set stream to null first - check actual functionality
     var stream = args.Stream;
 
-    if (stream is null)
-    {
-      // Cleanup network stuff
-      _writer?.Dispose();
-      _stream = null;
-      _writer = null;
-      return;
-    }
+    Writer?.Dispose();
+    Stream = stream;
 
-    // Re-establish network stuff
-    _stream = stream;
-    _writer = XmlWriter.Create(_stream, new XmlWriterSettings
-    {
-      Async = true, CloseOutput = false, OmitXmlDeclaration = true, ConformanceLevel = ConformanceLevel.Auto
-    });
+    if (Stream is not null)
+      Writer = XmlWriter.Create(Stream, new XmlWriterSettings
+      {
+        Async = true, CloseOutput = false, OmitXmlDeclaration = true, ConformanceLevel = ConformanceLevel.Auto
+      });
   }
   
   #endregion

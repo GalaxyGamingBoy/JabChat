@@ -27,7 +27,7 @@ public class TcpXmppBackend(bool forceTls) : IXmppClientBackend
   }
   
   // ReSharper disable once AsyncVoidEventHandlerMethod - XmppClient methods protected by result
-  public async void OnStreamFeatureRequested(object? sender, StreamFeatureRequestedEventArgs eventArgs)
+  public async void OnStreamFeatureAdvertised(object? sender, StreamFeatureRequestedEventArgs eventArgs)
   {
     var client = (IXmppClient) sender!;
     if (eventArgs.Feature is Features.StartTlsFeature || (TlsClient is null && forceTls))
