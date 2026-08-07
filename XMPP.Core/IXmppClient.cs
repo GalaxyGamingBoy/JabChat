@@ -97,17 +97,6 @@ public interface IXmppClient
   #region Element Registrations
 
   /// <summary>
-  /// Registers a XMPP stream feature for deserialization
-  /// </summary>
-  /// <typeparam name="T">Feature Element</typeparam>
-  public OneOf<
-    Unit,
-    RegisterFeatureResults.AmbiguousAttributeMatch,
-    RegisterFeatureResults.FeatureNamespaceAlreadyRegistered,
-    RegisterFeatureResults.FeatureNamespaceMissing
-  > RegisterFeature<T>();
-
-  /// <summary>
   /// Registers an unexpected stanza to act on
   /// </summary>
   /// <param name="func">Function to call</param>
@@ -130,18 +119,6 @@ public interface IXmppClient
     UnregisterUnexpectedStanzaResults.StanzaNameMissing,
     UnregisterUnexpectedStanzaResults.StanzaNamespaceMissing
   > UnregisterUnexpectedStanza<T>();
-
-  /// <summary>
-  /// Registers a client error
-  /// </summary>
-  /// <typeparam name="T">Client Error Element</typeparam>
-  public OneOf<
-    Unit,
-    RegisterClientErrorResults.AmbiguousAttributeMatch,
-    RegisterClientErrorResults.XmlErrorNameMissing,
-    RegisterClientErrorResults.XmlErrorNamespaceMissing,
-    RegisterClientErrorResults.ErrorAlreadyRegistered
-  > RegisterClientError<T>() where T : IClientError;
 
   /// <summary>
   /// Registers a SaslMechanism

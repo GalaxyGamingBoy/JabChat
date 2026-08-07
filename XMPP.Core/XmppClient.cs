@@ -59,13 +59,6 @@ using SendInfoQueryResult = OneOf<
   SendInfoQueryResults.WriterNullException
 >;
 
-using RegisterFeatureResult = OneOf<
-  Unit,
-  RegisterFeatureResults.AmbiguousAttributeMatch,
-  RegisterFeatureResults.FeatureNamespaceAlreadyRegistered,
-  RegisterFeatureResults.FeatureNamespaceMissing
->;
-
 using RegisterUnexpectedStanzaResult = OneOf<
   Unit,
   RegisterUnexpectedStanzaResults.AmbiguousAttributeMatch,
@@ -81,14 +74,6 @@ using UnregisterUnexpectedStanzaResult = OneOf<
   UnregisterUnexpectedStanzaResults.StanzaNamespaceMissing
 >;
 
-using RegisterClientErrorResult = OneOf<
-  Unit,
-  RegisterClientErrorResults.AmbiguousAttributeMatch,
-  RegisterClientErrorResults.XmlErrorNameMissing,
-  RegisterClientErrorResults.XmlErrorNamespaceMissing,
-  RegisterClientErrorResults.ErrorAlreadyRegistered
->;
-
 public class XmppClient : IXmppClient, IAsyncDisposable
 {
   #region Internal Fields
@@ -100,10 +85,6 @@ public class XmppClient : IXmppClient, IAsyncDisposable
   private Dictionary<string, TaskCompletionSource<InfoQuery>> InfoQueries { get; } = new();
   
   private SortedList<int, ISaslMechanism> SaslHandlers { get; } = new();
-  
-  private Dictionary<string, XmlSerializer> FeatureSerializers { get; } = new();
-  
-  private Dictionary<string, XmlSerializer> ErrorSerializers { get; } = new();
   
   private Dictionary<string, (XmlSerializer, Func<object, object?, Task>)> UnexpectedStanzaSerializers { get; } = new();
   
@@ -130,75 +111,6 @@ public class XmppClient : IXmppClient, IAsyncDisposable
 
   public XmppClient(IXmppClientBackend backend)
   {
-    // Stream Features
-    RegisterFeature<StartTlsFeature>();
-    RegisterFeature<SaslFeature>();
-    RegisterFeature<BindFeature>();
-
-    // Errors - StreamErrors
-    RegisterClientError<StreamErrors.BadFormat>();
-    RegisterClientError<StreamErrors.BadNamespacePrefix>();
-    RegisterClientError<StreamErrors.Conflict>();
-    RegisterClientError<StreamErrors.ConnectionTimeout>();
-    RegisterClientError<StreamErrors.HostGone>();
-    RegisterClientError<StreamErrors.HostUnknown>();
-    RegisterClientError<StreamErrors.ImproperAddressing>();
-    RegisterClientError<StreamErrors.InternalServerError>();
-    RegisterClientError<StreamErrors.InvalidFrom>();
-    RegisterClientError<StreamErrors.InvalidNamespace>();
-    RegisterClientError<StreamErrors.InvalidXml>();
-    RegisterClientError<StreamErrors.NotAuthorized>();
-    RegisterClientError<StreamErrors.NotWellFormed>();
-    RegisterClientError<StreamErrors.PolicyViolation>();
-    RegisterClientError<StreamErrors.RemoteConnectionFailed>();
-    RegisterClientError<StreamErrors.Reset>();
-    RegisterClientError<StreamErrors.ResourceConstraint>();
-    RegisterClientError<StreamErrors.RestrictedXml>();
-    RegisterClientError<StreamErrors.SeeOtherHost>();
-    RegisterClientError<StreamErrors.SystemShutdown>();
-    RegisterClientError<StreamErrors.UndefinedCondition>();
-    RegisterClientError<StreamErrors.UnsupportedEncoding>();
-    RegisterClientError<StreamErrors.UnsupportedFeature>();
-    RegisterClientError<StreamErrors.UnsupportedStanzaType>();
-    RegisterClientError<StreamErrors.UnsupportedVersion>();
-
-    // Errors - SaslErrors
-    RegisterClientError<SaslErrors.Aborted>();
-    RegisterClientError<SaslErrors.AccountDisabled>();
-    RegisterClientError<SaslErrors.CredentialsExpired>();
-    RegisterClientError<SaslErrors.EncryptionRequired>();
-    RegisterClientError<SaslErrors.IncorrectEncoding>();
-    RegisterClientError<SaslErrors.InvalidAuthZid>();
-    RegisterClientError<SaslErrors.InvalidMechanism>();
-    RegisterClientError<SaslErrors.MalformedRequest>();
-    RegisterClientError<SaslErrors.MechanismTooWeak>();
-    RegisterClientError<SaslErrors.NotAuthorized>();
-    RegisterClientError<SaslErrors.TemporaryAuthFailure>();
-
-    // Errors - StanzaErrors
-    RegisterClientError<StanzaErrors.BadRequest>();
-    RegisterClientError<StanzaErrors.Conflict>();
-    RegisterClientError<StanzaErrors.FeatureNotImplemented>();
-    RegisterClientError<StanzaErrors.Forbidden>();
-    RegisterClientError<StanzaErrors.Gone>();
-    RegisterClientError<StanzaErrors.InternalServerError>();
-    RegisterClientError<StanzaErrors.ItemNotFound>();
-    RegisterClientError<StanzaErrors.JidMalformed>();
-    RegisterClientError<StanzaErrors.NotAcceptable>();
-    RegisterClientError<StanzaErrors.NotAllowed>();
-    RegisterClientError<StanzaErrors.NotAuthorized>();
-    RegisterClientError<StanzaErrors.PolicyViolation>();
-    RegisterClientError<StanzaErrors.RecipientUnavailable>();
-    RegisterClientError<StanzaErrors.Redirect>();
-    RegisterClientError<StanzaErrors.RegistrationRequired>();
-    RegisterClientError<StanzaErrors.RemoteServerNotFound>();
-    RegisterClientError<StanzaErrors.RemoteServerTimeout>();
-    RegisterClientError<StanzaErrors.ResourceConstraint>();
-    RegisterClientError<StanzaErrors.ServiceUnavailable>();
-    RegisterClientError<StanzaErrors.SubscriptionRequired>();
-    RegisterClientError<StanzaErrors.UndefinedCondition>();
-    RegisterClientError<StanzaErrors.UnexpectedRequest>();
-
     // Backend Configuration
     Backend = backend;
     Backend.UseClient(this);
@@ -380,28 +292,6 @@ public class XmppClient : IXmppClient, IAsyncDisposable
 
   #region Element Registrations
 
-  public RegisterFeatureResult RegisterFeature<T>()
-  {
-    try
-    {
-      var attr = (XmlRootAttribute?)Attribute.GetCustomAttribute(
-        typeof(T), typeof(XmlRootAttribute));
-
-      if (attr?.Namespace == null)
-        return new RegisterFeatureResults.FeatureNamespaceMissing();
-
-      if (FeatureSerializers.ContainsKey(attr.Namespace))
-        return new RegisterFeatureResults.FeatureNamespaceAlreadyRegistered(attr.Namespace);
-
-      FeatureSerializers.Add(attr.Namespace, new XmlSerializer(typeof(T)));
-      return new Unit();
-    }
-    catch (AmbiguousMatchException)
-    {
-      return new RegisterFeatureResults.AmbiguousAttributeMatch();
-    }
-  }
-
   public RegisterUnexpectedStanzaResult RegisterUnexpectedStanza<T>(Func<object, object?, Task> func)
   {
     try
@@ -447,32 +337,6 @@ public class XmppClient : IXmppClient, IAsyncDisposable
     catch (AmbiguousMatchException)
     {
       return new UnregisterUnexpectedStanzaResults.AmbiguousAttributeMatch();
-    }
-  }
-  
-  public RegisterClientErrorResult RegisterClientError<T>() where T : IClientError
-  {
-    try
-    {
-      var attr = (XmlRootAttribute?)Attribute.GetCustomAttribute(
-        typeof(T), typeof(XmlRootAttribute));
-
-      if (attr?.ElementName == null)
-        return new RegisterClientErrorResults.XmlErrorNameMissing();
-      if (attr.Namespace == null)
-        return new RegisterClientErrorResults.XmlErrorNamespaceMissing();
-
-      var key = $"{attr.Namespace}/{attr.ElementName}";
-
-      if (ErrorSerializers.ContainsKey(key))
-        return new RegisterClientErrorResults.ErrorAlreadyRegistered(key);
-
-      ErrorSerializers.Add(key, new XmlSerializer(typeof(T)));
-      return new Unit();
-    }
-    catch (AmbiguousMatchException)
-    {
-      return new RegisterClientErrorResults.AmbiguousAttributeMatch();
     }
   }
   
@@ -533,7 +397,7 @@ public class XmppClient : IXmppClient, IAsyncDisposable
       if (sub is { NodeType: XmlNodeType.Element, Depth: 1 })
       {
         Console.WriteLine($"F> {sub.Name}: {sub.NamespaceURI}");
-        FeatureSerializers.TryGetValue(sub.NamespaceURI, out var featureSerializer);
+        XmppClientRegistry.FeatureSerializers.TryGetValue(sub.NamespaceURI, out var featureSerializer);
         var feature = featureSerializer?.Deserialize(sub);
         if (feature != null)
           StreamFeatureAdvertised?.Invoke(this, new StreamFeatureRequestedEventArgs { Feature = feature });
@@ -601,7 +465,7 @@ public class XmppClient : IXmppClient, IAsyncDisposable
     await sub.ReadAsync(); // Skip Header
     await sub.ReadAsync(); // Read first error
 
-    ErrorSerializers.TryGetValue($"{sub.NamespaceURI}/{sub.Name}", out var errorSerializer);
+    XmppClientRegistry.ErrorSerializers.TryGetValue($"{sub.NamespaceURI}/{sub.Name}", out var errorSerializer);
     return errorSerializer?.Deserialize(sub) as IClientError;
   }
 
@@ -709,7 +573,7 @@ public class XmppClient : IXmppClient, IAsyncDisposable
     var parsed =
       errors.Select(element =>
       {
-        ErrorSerializers.TryGetValue($"{element.NamespaceURI}/{element.Name}", out var errorSerializer);
+        XmppClientRegistry.ErrorSerializers.TryGetValue($"{element.NamespaceURI}/{element.Name}", out var errorSerializer);
         using var reader = new XmlNodeReader(element);
         return (IClientError?)errorSerializer?.Deserialize(reader);
       }).Where(e => e != null).ToList();
