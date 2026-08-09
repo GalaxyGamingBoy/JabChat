@@ -48,7 +48,7 @@ public class ConnectCommand : Command
     
     root.Subcommands.Add(new Repl.StateCommand(client));
     root.Subcommands.Add(new Repl.ReadLockCommand(client));
-    root.Subcommands.Add(new Repl.RoasterCommand(client));
+    root.Subcommands.Add(new Repl.RosterCommand(client));
     
     _replCommands = root;
   }

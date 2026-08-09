@@ -1,3 +1,5 @@
+using XMPP.Core.StanzaErrors;
+
 namespace XMPP.Core.Errors;
 
 public static class SendInfoQueryResults
@@ -12,7 +14,7 @@ public static class SendInfoQueryResults
     public string What() => "The XMPP client writer is null";
   }
 
-  public record InfoQueryError(string Error) : IClientError
+  public record InfoQueryError(string Error, StanzaError StanzaError) : IClientError
   {
     public string What() => "An error was returned from the Info Query";
   };

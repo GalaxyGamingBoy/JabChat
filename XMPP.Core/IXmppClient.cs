@@ -1,5 +1,6 @@
 using System.Xml.Linq;
 using OneOf;
+using XMPP.Core.Address;
 using XMPP.Core.Errors;
 using XMPP.Core.EventArgs;
 using XMPP.Core.InfoQueries;
@@ -13,6 +14,13 @@ public interface IXmppClient
   /// XMPP Client State
   /// </summary>
   public XmppState State { get; set; }
+  
+  /// <summary>
+  /// XMPP Server Address
+  /// </summary>
+  public XmppAddress Address { get; }
+  
+  public XmppJid ConnectedJid { get; }
   
   #region Connection Management
 
@@ -171,6 +179,8 @@ public interface IXmppClient
   /// </summary>
   event EventHandler<OnMessageReceivedEventArgs>? OnMessageReceived;
   
+  event EventHandler<OnUnexpectedInfoQueryReceivedEventArgs> OnUnexpectedInfoQueryReceived;
+    
   /// <summary>
   /// Raised by the Sasl handler when Sasl negotiations are complete
   /// </summary>

@@ -7,4 +7,6 @@ public record XmppJid(string LocalPart, string DomainPart, string? Resource)
     return Resource is not null
       ? $"{LocalPart}@{DomainPart}/{Resource}" : $"{LocalPart}@{DomainPart}";
   }
+
+  public string BareJid => $"{LocalPart}@{DomainPart}";
 }

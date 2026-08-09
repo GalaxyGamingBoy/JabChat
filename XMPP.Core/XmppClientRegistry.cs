@@ -21,6 +21,14 @@ using RegisterClientErrorResult = OneOf<
   RegisterClientErrorResults.ErrorAlreadyRegistered
 >;
 
+using RegisterInfoQueryResult = OneOf<
+  Unit,
+  RegisterInfoQueryResults.AmbiguousAttributeMatch,
+  RegisterInfoQueryResults.XmlErrorNameMissing,
+  RegisterInfoQueryResults.XmlErrorNamespaceMissing,
+  RegisterInfoQueryResults.ErrorAlreadyRegistered
+>;
+
 /// <summary>
 /// The XmppClientRegistry holds XML serializers that are common across all clients
 /// </summary>
@@ -29,6 +37,8 @@ public static class XmppClientRegistry
   public static Dictionary<string, XmlSerializer> ErrorSerializers { get; } = new();
   
   public static Dictionary<string, XmlSerializer> FeatureSerializers { get; } = new();
+  
+  public static Dictionary<string, XmlSerializer> InfoQuerySerializers { get; } = new();
 
   static XmppClientRegistry()
   {
@@ -155,6 +165,36 @@ public static class XmppClientRegistry
     catch (AmbiguousMatchException)
     {
       return new RegisterClientErrorResults.AmbiguousAttributeMatch();
+    }
+  }
+  
+  /// <summary>
+  /// Registers a client error with the registry
+  /// </summary>
+  /// <typeparam name="T">Client error to register</typeparam>
+  public static RegisterInfoQueryResult RegisterInfoQuery<T>()
+  {
+    try
+    {
+      var attr = (XmlRootAttribute?)Attribute.GetCustomAttribute(
+        typeof(T), typeof(XmlRootAttribute));
+
+      if (attr?.ElementName == null)
+        return new RegisterInfoQueryResults.XmlErrorNameMissing();
+      if (attr.Namespace == null)
+        return new RegisterInfoQueryResults.XmlErrorNamespaceMissing();
+
+      var key = $"{attr.Namespace}/{attr.ElementName}";
+
+      if (InfoQuerySerializers.ContainsKey(key))
+        return new RegisterInfoQueryResults.ErrorAlreadyRegistered(key);
+
+      InfoQuerySerializers.Add(key, new XmlSerializer(typeof(T)));
+      return new Unit();
+    }
+    catch (AmbiguousMatchException)
+    {
+      return new RegisterInfoQueryResults.AmbiguousAttributeMatch();
     }
   }
 }

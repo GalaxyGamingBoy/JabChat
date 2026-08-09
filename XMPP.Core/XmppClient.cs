@@ -111,6 +111,8 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
   
   public required XmppCredentials Credentials { get; init; }
 
+  public XmppJid ConnectedJid => FullJid ?? Credentials.Jid;
+
   #endregion
 
   public XmppClient(IXmppClientBackend backend) : this()
@@ -288,7 +290,7 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
       
     var result = await tcs.Task;
     if (result.Type == InfoQueryType.Error)
-      return new SendInfoQueryResults.InfoQueryError(result.ToString());
+      return new SendInfoQueryResults.InfoQueryError(result.ToString(), result.StanzaError!);
     return result;
   }
   
@@ -422,9 +424,13 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
       return;
 
     infoQuery.StanzaError?.Errors = ParseStanzaErrors(infoQuery.StanzaError.InternalErrors);
+    infoQuery.DeserializeExtensions();
 
     InfoQueries.TryGetValue(infoQuery.Id!, out var infoQueryTaskSource);
     infoQueryTaskSource?.TrySetResult(infoQuery);
+    
+    if (infoQueryTaskSource is null)
+      OnUnexpectedInfoQueryReceived?.Invoke(this, new OnUnexpectedInfoQueryReceivedEventArgs() {InfoQuery = infoQuery});
   }
   
   private readonly XmlSerializer _messageSerializer = new(typeof(Message));
@@ -634,6 +640,8 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
   public event EventHandler<StreamFeatureRequestedEventArgs>? StreamFeatureAdvertised;
   
   public event EventHandler<OnMessageReceivedEventArgs>? OnMessageReceived;
+  
+  public event EventHandler<OnUnexpectedInfoQueryReceivedEventArgs>? OnUnexpectedInfoQueryReceived;
   
   public async Task SaslCompleted()
   {
