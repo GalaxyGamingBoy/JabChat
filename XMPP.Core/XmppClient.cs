@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Diagnostics;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Xml;
 using System.Xml.Linq;
@@ -99,6 +100,7 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
   private IXmppClientBackend Backend { get; init; }
   
   private BitArray _enabledExtensions = new(maxExtensionLength);
+  private BitArray[] _loadExtensionAt = Enumerable.Repeat(new BitArray(maxExtensionLength), 2).ToArray();
   private Dictionary<int, IXmppClientExtension> _extensions = new();
   
   #endregion
@@ -166,10 +168,12 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
     if (State != XmppState.Disconnected)
       return new ConnectResults.ClientAlreadyConnected();
 
+    await LoadExtensions(XmppClientExtensionLoadAt.InstantActivateOnConnected);
+
     var backendConnectResult = await Backend.ConnectAsync(Address);
     if (!backendConnectResult.IsT0)
       return backendConnectResult.Match<ConnectResult>(
-        _ => new Unit(),
+        _ => throw new UnreachableException(),
         _ => new ConnectResults.AddressPortInvalid(), 
         _ => new ConnectResults.ClientAlreadyConnected(),
         _ => new ConnectResults.ConnectionFailure());
@@ -179,10 +183,12 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
     var streamResult = await OpenXmppStream();
     if (!streamResult.IsT0)
       return streamResult.Match<ConnectResult>(
-        _ => new Unit(),
+        _ => throw new UnreachableException(),
         _ => new ConnectResults.ClientAlreadyConnected());
     
     StartBackgroundService();
+    
+    await ActivateExtensions(XmppClientExtensionLoadAt.InstantActivateOnConnected);
 
     return new Unit();
   }
@@ -568,12 +574,18 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
     return IsExtensionEnabled(T.ExtensionIdentifier);
   }
 
+  public bool AreExtensionsEnabled(BitArray extensions)
+  {
+    return _enabledExtensions.And(extensions).HasAnySet();
+  }
+
   public void EnableExtension<T>() where T : class, IXmppClientExtension<T>
   {
     var extension = T.Create(this);
     _extensions[T.ExtensionIdentifier] = extension;
     
     _enabledExtensions[T.ExtensionIdentifier] = true;
+    _loadExtensionAt[(int)T.LoadAt][T.ExtensionIdentifier] = true;
   }
 
   public async Task DisableExtension<T>() where T : class, IXmppClientExtension<T>
@@ -584,6 +596,7 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
     
     _extensions.Remove(T.ExtensionIdentifier);
     _enabledExtensions[T.ExtensionIdentifier] = false;
+    _loadExtensionAt[(int)T.LoadAt][T.ExtensionIdentifier] = false;
   }
 
   public T? GetExtension<T>() where T : class, IXmppClientExtension<T>
@@ -592,6 +605,26 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
       return null;
 
     return _extensions[T.ExtensionIdentifier] as T;
+  }
+
+  private async Task LoadExtensions(XmppClientExtensionLoadAt load)
+  {
+    var enabled = _loadExtensionAt[(int)load];
+    for (var i = 0; i < enabled.Length; i++)
+    {
+      if (!enabled[i]) continue;
+      await _extensions[i].LoadAsync();
+    }
+  }
+  
+  private async Task ActivateExtensions(XmppClientExtensionLoadAt load)
+  {
+    var enabled = _loadExtensionAt[(int)load];
+    for (var i = 0; i < enabled.Length; i++)
+    {
+      if (!enabled[i]) continue;
+      await _extensions[i].ActivateAsync();
+    }
   }
 
   #endregion
@@ -710,6 +743,9 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
       Console.WriteLine($"XMPP Client Connected to JID {FullJid}");
       
       State = XmppState.Connected;
+
+      await LoadExtensions(XmppClientExtensionLoadAt.AndActivateOnSuccess);
+      await ActivateExtensions(XmppClientExtensionLoadAt.AndActivateOnSuccess);
       
       EnableExtension<ImExtension>();
     }

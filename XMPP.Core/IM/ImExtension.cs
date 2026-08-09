@@ -35,7 +35,19 @@ public class ImExtension : IXmppClientExtension<ImExtension>
 {
   public static int ExtensionIdentifier => 0;
 
+  public static XmppClientExtensionLoadAt LoadAt => XmppClientExtensionLoadAt.AndActivateOnSuccess;
+
   public static ImExtension Create(IXmppClient client) => new(client);
+  
+  public Task LoadAsync()
+  {
+    return Task.CompletedTask;
+  }
+
+  public Task ActivateAsync()
+  {
+    return Task.CompletedTask;
+  }
 
   public List<RosterItem> RosterItems = [];
   
