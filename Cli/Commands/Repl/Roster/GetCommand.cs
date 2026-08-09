@@ -10,7 +10,7 @@ public class GetCommand : Command
 {
   private readonly IXmppClient _client;
   
-  public GetCommand(IXmppClient client) : base("get", "Get the current roster of the connected jid")
+  public GetCommand(IXmppClient client) : base("get", "Get the current roster of the connected jid from the server")
   { 
     _client = client; 
     
@@ -27,17 +27,9 @@ public class GetCommand : Command
     }
 
     var result = await im.GetRoster();
-    if (!result.IsT0)
-    {
-      IClientError err = (IClientError) result.Value;
-      AnsiConsole.MarkupLine($"[bold red]An error occured while getting the roster: {err.What()}[/]");
-      return;
-    }
-
-    var roster = result.AsT0!;
-    AnsiConsole.MarkupLine($"Roster Version: [yellow]{roster.Version}[/]");
-    AnsiConsole.MarkupLine("Roster Items:");
-    foreach (var item in roster.RosterItems)
-      AnsiConsole.MarkupLine($"* [blue]{item.Jid}[/]");
+    if (result.IsT0) return;
+    
+    var err = (IClientError) result.Value;
+    AnsiConsole.MarkupLine($"[bold red]An error occured while getting the roster: {err.What()}[/]");
   }
 }

@@ -61,7 +61,7 @@ public class ConnectCommand : Command
       var input = Console.ReadLine();
 
       if (input is null) return;
-      if (input is "exit" or "quit") return;
+      if (input is "exit" or "quit" or "q") return;
 
       await _replCommands.Parse(input).InvokeAsync();
     }

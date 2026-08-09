@@ -10,9 +10,9 @@ public record RosterItem
   
   [XmlAttribute("name")]
   public string? Name { get; init; }
-  
+
   [XmlAttribute("subscription")]
-  public RosterItemSubscription? Subscription { get; init; }
+  public RosterItemSubscription Subscription { get; init; } = RosterItemSubscription.None;
 
   [XmlElement("group")]
   public List<string> Groups { get; init; } = [];
