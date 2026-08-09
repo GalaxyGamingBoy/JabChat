@@ -78,8 +78,9 @@
 	<s:Boolean x:Key="/Default/ResxEditorPersonal/Initialized/@EntryValue">True</s:Boolean>
 	<s:Boolean x:Key="/Default/ResxEditorPersonal/ShowComments/@EntryValue">False</s:Boolean>
 	
-	<s:Boolean x:Key="/Default/UnloadedProject/UnloadedProjects/=06a18784_002D0637_002Dd443_002D2e01_002D0885cf7266df_0023Cli/@EntryIndexedValue">True</s:Boolean>
+	
 	<s:Boolean x:Key="/Default/UnloadedProject/UnloadedProjects/=402450f0_002D43f0_002D8ddf_002D1396_002D637cef36104e_0023JabChat_002EAndroid/@EntryIndexedValue">True</s:Boolean>
+	<s:Boolean x:Key="/Default/UnloadedProject/UnloadedProjects/=4147baab_002D463c_002D021f_002Db367_002Dec22c44446b7_0023JabChat/@EntryIndexedValue">True</s:Boolean>
 	
 	
 	
@@ -93,6 +94,8 @@
 	<s:Boolean x:Key="/Default/UnloadedProject/UnloadedProjects/=bd0fb999_002Dfffb_002D593b_002D9a21_002D6bb2b0d8b77a_0023XMPP_002ETests/@EntryIndexedValue">True</s:Boolean>
 	
 	<s:Boolean x:Key="/Default/UnloadedProject/UnloadedProjects/=d4a89563_002D81d9_002Dab61_002D0221_002D59c125300e3a_0023XMPP_002EXEP_002E0030/@EntryIndexedValue">True</s:Boolean>
+	<s:Boolean x:Key="/Default/UnloadedProject/UnloadedProjects/=dc013dfc_002De907_002De1df_002Dae53_002D723383f6688b_0023JabChat_002EBrowser/@EntryIndexedValue">True</s:Boolean>
+	<s:Boolean x:Key="/Default/UnloadedProject/UnloadedProjects/=e7946072_002Dcfd2_002D69bb_002D4248_002Da713ab92252a_0023JabChat_002EMigrations/@EntryIndexedValue">True</s:Boolean>
 	
 	
 	
@@ -100,6 +103,7 @@
 	
 	
 	<s:Boolean x:Key="/Default/UnloadedProject/UnloadedProjects/=eec64bc1_002D09d3_002Ddbba_002D3349_002D163518a5f63e_0023App_002EAndroid/@EntryIndexedValue">True</s:Boolean>
+	<s:Boolean x:Key="/Default/UnloadedProject/UnloadedProjects/=ef8c1496_002D51c8_002Dbeda_002D5835_002D6a590cee73f8_0023JabChat_002EDesktop/@EntryIndexedValue">True</s:Boolean>
 	
 	
 	</wpf:ResourceDictionary>

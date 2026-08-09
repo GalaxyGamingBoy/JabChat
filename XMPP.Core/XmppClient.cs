@@ -100,7 +100,6 @@ public class XmppClient : IXmppClient, IAsyncDisposable
 
   #region Public Fields
   
-  // ReSharper disable once MemberCanBePrivate.Global - Useful for applications
   public XmppState State { get; set; } = XmppState.Disconnected;
 
   public required XmppAddress Address { get; init; }

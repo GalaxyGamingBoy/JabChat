@@ -9,6 +9,11 @@ namespace XMPP.Core;
 
 public interface IXmppClient
 {
+  /// <summary>
+  /// XMPP Client State
+  /// </summary>
+  public XmppState State { get; set; }
+  
   #region Connection Management
 
   /// <summary>

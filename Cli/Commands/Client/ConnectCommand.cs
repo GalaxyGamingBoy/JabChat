@@ -40,6 +40,32 @@ public class ConnectCommand : Command
     Arity = ArgumentArity.ZeroOrOne
   };
 
+  private RootCommand _replCommands = null!;
+
+  private void CreateReplCommands(IXmppClient client)
+  {
+    var root = new RootCommand("JabChat CLI REPL");
+    
+    root.Subcommands.Add(new Repl.StateCommand(client));
+    root.Subcommands.Add(new Repl.ReadLockCommand(client));
+    
+    _replCommands = root;
+  }
+
+  private async Task Repl(IXmppClient client)
+  {
+    while (true)
+    {
+      Console.Write("terminal> ");
+      var input = Console.ReadLine();
+
+      if (input is null) return;
+      if (input is "exit" or "quit") return;
+
+      await _replCommands.Parse(input).InvokeAsync();
+    }
+  }
+
   private async Task CommandAction(ParseResult result)
   {
     var host = result.GetRequiredValue(_host);
@@ -73,8 +99,12 @@ public class ConnectCommand : Command
     
     AnsiConsole.MarkupLine($"Connecting to [yellow]{host}[/]... (Press any key to exit)");
     await client.ConnectAsync();
-
-    Console.Read();
+    
+    while (client.State != XmppState.Connected)
+      await Task.Delay(100);
+    
+    CreateReplCommands(client);
+    await Repl(client);
   }
 
   public ConnectCommand() : base("connect", "Connects to the XMPP host")
