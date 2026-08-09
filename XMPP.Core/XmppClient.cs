@@ -284,7 +284,7 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
     var id = Guid.CreateVersion7().ToString();
     query.Id ??= id;
 
-    var tcs = new TaskCompletionSource<InfoQuery>();
+    var tcs = new TaskCompletionSource<InfoQuery>(TaskCreationOptions.RunContinuationsAsynchronously);
     InfoQueries[id] = tcs;
     
     var stanzaResult = await SendStanzaAsync(query);
@@ -422,8 +422,6 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
 
   private void ReadInfoQuery(XmlReader reader)
   {
-    ReadLock.Release();
-
     using var sub = reader.ReadSubtree();
     var infoQuery = (InfoQuery?)_infoQuerySerializer.Deserialize(sub);
     if (infoQuery == null)
@@ -431,12 +429,15 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
 
     infoQuery.StanzaError?.Errors = ParseStanzaErrors(infoQuery.StanzaError.InternalErrors);
     infoQuery.DeserializeExtensions();
-
-    InfoQueries.TryGetValue(infoQuery.Id!, out var infoQueryTaskSource);
-    infoQueryTaskSource?.TrySetResult(infoQuery);
     
+    ReadLock.Release();
+    
+    InfoQueries.TryGetValue(infoQuery.Id!, out var infoQueryTaskSource);
     if (infoQueryTaskSource is null)
-      OnUnexpectedInfoQueryReceived?.Invoke(this, new OnUnexpectedInfoQueryReceivedEventArgs() {InfoQuery = infoQuery});
+      OnUnexpectedInfoQueryReceived?.Invoke(this,
+        new OnUnexpectedInfoQueryReceivedEventArgs() { InfoQuery = infoQuery });
+    else
+      infoQueryTaskSource.TrySetResult(infoQuery);
   }
   
   private readonly XmlSerializer _messageSerializer = new(typeof(Message));
@@ -729,19 +730,19 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
         InvokeClientError(new BindError(resource, (result.Value as IClientError)?.What()!));
         return;
       }
-
+      
       var iq = result.AsT0;
-
-
+      
+      
       if (iq.Type == InfoQueryType.Error)
       {
         var errors = iq.StanzaError!.Errors.Select(e => e.What());
         InvokeClientError(new BindError(resource, string.Join(Environment.NewLine, errors)));
       }
-
+      
       FullJid = Credentials.Jid with { Resource = iq.ResourceBind!.Resource };
       Console.WriteLine($"XMPP Client Connected to JID {FullJid}");
-      
+
       State = XmppState.Connected;
 
       await LoadExtensions(XmppClientExtensionLoadAt.AndActivateOnSuccess);
