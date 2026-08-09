@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Diagnostics;
 using System.Reflection;
 using System.Text;
@@ -10,6 +11,7 @@ using XMPP.Core.Backend;
 using XMPP.Core.Errors;
 using XMPP.Core.EventArgs;
 using XMPP.Core.Features;
+using XMPP.Core.IM;
 using XMPP.Core.InfoQueries;
 using XMPP.Core.Messages;
 using XMPP.Core.SaslMechanisms;
@@ -74,7 +76,7 @@ using UnregisterUnexpectedStanzaResult = OneOf<
   UnregisterUnexpectedStanzaResults.StanzaNamespaceMissing
 >;
 
-public class XmppClient : IXmppClient, IAsyncDisposable
+public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDisposable
 {
   #region Internal Fields
 
@@ -96,6 +98,9 @@ public class XmppClient : IXmppClient, IAsyncDisposable
 
   private IXmppClientBackend Backend { get; init; }
   
+  private BitArray _enabledExtensions = new(maxExtensionLength);
+  private Dictionary<int, IXmppClientExtension> _extensions = new();
+  
   #endregion
 
   #region Public Fields
@@ -108,7 +113,7 @@ public class XmppClient : IXmppClient, IAsyncDisposable
 
   #endregion
 
-  public XmppClient(IXmppClientBackend backend)
+  public XmppClient(IXmppClientBackend backend) : this()
   {
     // Backend Configuration
     Backend = backend;
@@ -545,6 +550,46 @@ public class XmppClient : IXmppClient, IAsyncDisposable
   
   #endregion
   
+  #region Extensions
+
+  public bool IsExtensionEnabled(int extensionIdentifier)
+  {
+    return _enabledExtensions[extensionIdentifier];
+  }
+
+  public bool IsExtensionEnabled<T>() where T : class, IXmppClientExtension<T>
+  {
+    return IsExtensionEnabled(T.ExtensionIdentifier);
+  }
+
+  public void EnableExtension<T>() where T : class, IXmppClientExtension<T>
+  {
+    var extension = T.Create(this);
+    _extensions[T.ExtensionIdentifier] = extension;
+    
+    _enabledExtensions[T.ExtensionIdentifier] = true;
+  }
+
+  public async Task DisableExtension<T>() where T : class, IXmppClientExtension<T>
+  {
+    var ext = GetExtension<T>();
+    if (ext != null)
+      await ext.DisposeAsync();
+    
+    _extensions.Remove(T.ExtensionIdentifier);
+    _enabledExtensions[T.ExtensionIdentifier] = false;
+  }
+
+  public T? GetExtension<T>() where T : class, IXmppClientExtension<T>
+  {
+    if (!_enabledExtensions[T.ExtensionIdentifier])
+      return null;
+
+    return _extensions[T.ExtensionIdentifier] as T;
+  }
+
+  #endregion
+  
   #region Error Handling
 
   public event EventHandler<ClientErrorRaisedEventArgs>? ClientErrorRaised;
@@ -655,8 +700,10 @@ public class XmppClient : IXmppClient, IAsyncDisposable
 
       FullJid = Credentials.Jid with { Resource = iq.ResourceBind!.Resource };
       Console.WriteLine($"XMPP Client Connected to JID {FullJid}");
-
+      
       State = XmppState.Connected;
+      
+      EnableExtension<ImExtension>();
     }
     catch (Exception)
     {

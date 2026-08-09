@@ -1,6 +1,6 @@
 using System.Xml.Serialization;
 
-namespace XMPP.Core;
+namespace XMPP.Core.InfoQueries;
 
 public enum InfoQueryType
 {

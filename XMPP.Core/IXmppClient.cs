@@ -178,6 +178,20 @@ public interface IXmppClient
 
   #endregion
 
+  #region Extensions
+
+  public bool IsExtensionEnabled(int extensionIdentifier);
+  
+  public bool IsExtensionEnabled<T>() where T : class, IXmppClientExtension<T>;
+
+  public void EnableExtension<T>() where T : class, IXmppClientExtension<T>;
+
+  public Task DisableExtension<T>() where T : class, IXmppClientExtension<T>;
+  
+  public T? GetExtension<T>() where T : class, IXmppClientExtension<T>;
+  
+  #endregion
+  
   #region Error Handling
 
   /// <summary>
