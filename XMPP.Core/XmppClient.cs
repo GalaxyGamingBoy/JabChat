@@ -62,6 +62,12 @@ using SendInfoQueryResult = OneOf<
   SendInfoQueryResults.WriterNullException
 >;
 
+using SendPresenceResult = OneOf<
+  Unit,
+  SendPresenceResults.SerializationFailure,
+  SendPresenceResults.WriterNullException
+>;
+
 using RegisterUnexpectedStanzaResult = OneOf<
   Unit,
   RegisterUnexpectedStanzaResults.AmbiguousAttributeMatch,
@@ -299,7 +305,18 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
       return new SendInfoQueryResults.InfoQueryError(result.ToString(), result.StanzaError!);
     return result;
   }
-  
+
+  public async Task<SendPresenceResult> SendPresenceAsync(Presence.Presence presence)
+  {
+    var id =  Guid.CreateVersion7().ToString();
+    presence.Id ??= id;
+
+    return (await SendStanzaAsync(presence)).Match<SendPresenceResult>(
+      _ => new Unit(),
+      _ => new SendPresenceResults.SerializationFailure(),
+      _ => new SendPresenceResults.WriterNullException());
+  }
+
   #endregion
 
   #region Element Registrations
@@ -458,6 +475,26 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
     }
 
     OnMessageReceived?.Invoke(this, new OnMessageReceivedEventArgs { Message = message });
+  }
+
+  private readonly XmlSerializer _presenceSerializer = new(typeof(Presence.Presence));
+
+  private void ReadPresence(XmlReader reader)
+  {
+    ReadLock.Release();
+    
+    using var sub = reader.ReadSubtree();
+    var presence = (Presence.Presence?)_presenceSerializer.Deserialize(sub);
+
+    if (presence == null) return;
+
+    if (presence.StanzaError is not null)
+    {
+      var errors = ParseStanzaErrors(presence.StanzaError.InternalErrors);
+      presence.StanzaError.Errors = errors;
+    }
+    
+    OnPresenceReceived?.Invoke(this, new OnPresenceReceivedEventArgs { Presence = presence });
   }
 
   private void ReadUnexpectedStanza(XmlReader reader)
@@ -674,6 +711,8 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
   public event EventHandler<StreamFeatureRequestedEventArgs>? StreamFeatureAdvertised;
   
   public event EventHandler<OnMessageReceivedEventArgs>? OnMessageReceived;
+  
+  public event EventHandler<OnPresenceReceivedEventArgs>? OnPresenceReceived;
   
   public event EventHandler<OnUnexpectedInfoQueryReceivedEventArgs>? OnUnexpectedInfoQueryReceived;
   

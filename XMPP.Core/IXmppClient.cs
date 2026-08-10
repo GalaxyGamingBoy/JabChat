@@ -98,6 +98,16 @@ public interface IXmppClient
   >> SendInfoQueryAsync(InfoQuery query);
   
   /// <summary>
+  /// Sends a presence to the server
+  /// </summary>
+  /// <param name="presence">Presence element</param>
+  public Task<OneOf<
+    Unit,
+    SendPresenceResults.SerializationFailure,
+    SendPresenceResults.WriterNullException
+  >> SendPresenceAsync(Presence.Presence presence);
+  
+  /// <summary>
   /// Manages the ReadLock of the backend service, usually there is no need to touch (exceptions exist)
   ///
   /// The only time you are supposed to release the ReadLock is when:
@@ -179,6 +189,14 @@ public interface IXmppClient
   /// </summary>
   event EventHandler<OnMessageReceivedEventArgs>? OnMessageReceived;
   
+  /// <summary>
+  /// Raised when a presence event is received by the client
+  /// </summary>
+  public event EventHandler<OnPresenceReceivedEventArgs>? OnPresenceReceived;
+  
+  /// <summary>
+  /// Raised when an unexpected info query is received
+  /// </summary>
   event EventHandler<OnUnexpectedInfoQueryReceivedEventArgs> OnUnexpectedInfoQueryReceived;
     
   /// <summary>
