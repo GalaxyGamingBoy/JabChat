@@ -51,6 +51,8 @@ public class ImExtension : IXmppClientExtension<ImExtension>
 
   public List<RosterItem> RosterItems = [];
   
+  public string CachedVersion = string.Empty;
+  
   private readonly IXmppClient _client;
 
   static ImExtension()
@@ -67,20 +69,27 @@ public class ImExtension : IXmppClientExtension<ImExtension>
   /// <summary>
   /// Get the latest roster of the connected JID from the server.
   /// Usually called only once, after a successful connection.
+  /// CachedVersion keeps track of the roster version, if communicated by the server.
   /// </summary>
   /// <seealso href="https://xmpp.org/rfcs/rfc6121.html#roster-syntax-actions-get">
   /// RFC6121 - 2.1.3. Roster Get
   /// </seealso>
+  /// <seealso href="https://xmpp.org/rfcs/rfc6121.html#roster-versioning">
+  /// RFC6121 - 2.6. Roster Versioning
+  /// </seealso>
   public async Task<GetRosterResult> GetRoster()
   {
     var iq = new InfoQuery(type: InfoQueryType.Get) { From =  _client.ConnectedJid.ToString() };
-    iq.AddExtensionObject(new InfoQueryRoster());
+    iq.AddExtensionObject(new InfoQueryRoster() { Version = CachedVersion });
     
     var result = await _client.SendInfoQueryAsync(iq);
     return result.Match<GetRosterResult>(
       iqr =>
       {
-        var roster = iqr.GetExtensionObject<InfoQueryRoster>()!;
+        var roster = iqr.GetExtensionObject<InfoQueryRoster>();
+        if (roster is null) return new Unit();
+        
+        CachedVersion = roster.Version ?? string.Empty;
         RosterItems = roster.RosterItems;
         return new Unit();
       },
