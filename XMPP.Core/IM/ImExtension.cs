@@ -54,18 +54,28 @@ public class ImExtension : IXmppClientExtension<ImExtension>
   public List<RosterItem> RosterItems = [];
   
   public string CachedVersion = string.Empty;
+
+  public bool RosterVersioningEnabled { get; set; } = false;
   
   private readonly IXmppClient _client;
 
   static ImExtension()
   {
     XmppClientRegistry.RegisterInfoQuery<InfoQueryRoster>();
+    XmppClientRegistry.RegisterFeature<ImRosterVersioningFeature>();
   }
 
   public ImExtension(IXmppClient client)
   {
     _client = client;
     _client.OnUnexpectedInfoQueryReceived += OnUnexpectedInfoQueryReceived;
+    _client.StreamFeatureAdvertised += ClientOnStreamFeatureAdvertised;
+  }
+
+  void ClientOnStreamFeatureAdvertised(object? sender, StreamFeatureRequestedEventArgs e)
+  {
+    if (e.Feature is ImRosterVersioningFeature)
+      RosterVersioningEnabled = true;
   }
 
   /// <summary>
@@ -82,7 +92,7 @@ public class ImExtension : IXmppClientExtension<ImExtension>
   public async Task<GetRosterResult> GetRoster()
   {
     var iq = new InfoQuery(type: InfoQueryType.Get) { From =  _client.ConnectedJid.ToString() };
-    iq.AddExtensionObject(new InfoQueryRoster() { Version = CachedVersion });
+    iq.AddExtensionObject(new InfoQueryRoster { Version = RosterVersioningEnabled ? CachedVersion : null });
     
     var result = await _client.SendInfoQueryAsync(iq);
     return result.Match<GetRosterResult>(
@@ -92,6 +102,7 @@ public class ImExtension : IXmppClientExtension<ImExtension>
         if (roster is null) return new Unit();
         
         CachedVersion = roster.Version ?? string.Empty;
+        
         RosterItems = roster.RosterItems;
         return new Unit();
       },
