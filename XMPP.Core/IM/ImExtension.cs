@@ -3,6 +3,7 @@ using OneOf;
 using XMPP.Core.Errors;
 using XMPP.Core.EventArgs;
 using XMPP.Core.InfoQueries;
+using XMPP.Core.Presence;
 using XMPP.Core.StanzaErrors;
 
 namespace XMPP.Core.IM;
@@ -31,19 +32,20 @@ using DeleteRosterItemResult = OneOf<
   SendInfoQueryResults.WriterNullException
 >;
 
+using RequestPresenceSubscriptionResult = OneOf<
+  Unit,
+  SendPresenceResults.SerializationFailure,
+  SendPresenceResults.WriterNullException
+>;
+
 public class ImExtension : IXmppClientExtension<ImExtension>
 {
   public static int ExtensionIdentifier => 0;
 
-  public static XmppClientExtensionLoadAt LoadAt => XmppClientExtensionLoadAt.AndActivateOnSuccess;
+  public static XmppClientExtensionActivateOn ActivateOn => XmppClientExtensionActivateOn.SaslComplete;
 
   public static ImExtension Create(IXmppClient client) => new(client);
   
-  public Task LoadAsync()
-  {
-    return Task.CompletedTask;
-  }
-
   public Task ActivateAsync()
   {
     return Task.CompletedTask;
@@ -155,6 +157,23 @@ public class ImExtension : IXmppClientExtension<ImExtension>
   }
 
   /// <summary>
+  /// Request a presence subscription to a JID.
+  /// </summary>
+  /// <param name="jid">The bare JID of the entity to subscribe to</param>
+  /// <seealso href="https://xmpp.org/rfcs/rfc6121.html#sub-request">
+  /// RFC6121 - 3.1. Requesting a Subscription
+  /// </seealso>
+  public async Task<RequestPresenceSubscriptionResult> RequestPresenceSubscription(string jid)
+  {
+    var presence = new Presence.Presence() { To = jid, Type = PresenceType.Subscribe };
+    return (await _client.SendPresenceAsync(presence)).Match<RequestPresenceSubscriptionResult>(
+      unit => unit,
+      serializationFailure => serializationFailure,
+      writerNullException => writerNullException
+      );
+  }
+
+  /// <summary>
   /// Handle Roster Push Queries
   /// </summary>
   /// <seealso href="https://xmpp.org/rfcs/rfc6121.html#roster-syntax-actions-push">
@@ -168,6 +187,8 @@ public class ImExtension : IXmppClientExtension<ImExtension>
     if (e.InfoQuery.From is not null && e.InfoQuery.From != _client.ConnectedJid.BareJid)
       return;
 
+    CachedVersion = rosterPushIq.Version ?? string.Empty;
+    
     var serverItem = rosterPushIq.RosterItems.Single();
     var hasJid = RosterItems.Count(r => r.Jid == serverItem.Jid) == 1;
     if (hasJid)

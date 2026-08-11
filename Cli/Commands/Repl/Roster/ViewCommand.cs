@@ -25,6 +25,7 @@ public class ViewCommand : Command
       return;
     }
     
+    AnsiConsole.MarkupLine($"Cached Roster Version: [yellow]{im.CachedVersion}[/]");
     AnsiConsole.MarkupLine("Roster Items:");
     foreach (var item in im.RosterItems)
     {

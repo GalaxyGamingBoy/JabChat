@@ -1,7 +1,6 @@
 using System.Collections;
 using System.Diagnostics;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Text;
 using System.Xml;
 using System.Xml.Linq;
@@ -105,9 +104,9 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
 
   private IXmppClientBackend Backend { get; init; }
   
-  private BitArray _enabledExtensions = new(maxExtensionLength);
-  private BitArray[] _loadExtensionAt = Enumerable.Repeat(new BitArray(maxExtensionLength), 2).ToArray();
-  private Dictionary<int, IXmppClientExtension> _extensions = new();
+  private readonly BitArray _enabledExtensions = new(maxExtensionLength);
+  private readonly Dictionary<XmppClientExtensionActivateOn, List<IXmppClientExtension>> _extensionsActivateOn = new();
+  private readonly Dictionary<int, IXmppClientExtension> _extensions = new();
   
   #endregion
 
@@ -150,6 +149,9 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
     StreamFeatureAdvertised += SaslHandler;
     StreamFeatureAdvertised += BindHandler;
     ClientErrorRaised += OnStreamError;
+    
+    // Enable Extensions
+    EnableExtension<ImExtension>();
   }
   
   public async ValueTask DisposeAsync()
@@ -173,9 +175,7 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
   {
     if (State != XmppState.Disconnected)
       return new ConnectResults.ClientAlreadyConnected();
-
-    await LoadExtensions(XmppClientExtensionLoadAt.InstantActivateOnConnected);
-
+    
     var backendConnectResult = await Backend.ConnectAsync(Address);
     if (!backendConnectResult.IsT0)
       return backendConnectResult.Match<ConnectResult>(
@@ -194,7 +194,7 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
     
     StartBackgroundService();
     
-    await ActivateExtensions(XmppClientExtensionLoadAt.InstantActivateOnConnected);
+    await ActivateExtensions(XmppClientExtensionActivateOn.Connected);
 
     return new Unit();
   }
@@ -591,6 +591,9 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
         case "message":
           ReadMessage(reader);
           break;
+        case "presence":
+          ReadPresence(reader);
+          break;
         default:
           ReadUnexpectedStanza(reader);
           break;
@@ -614,7 +617,9 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
 
   public bool AreExtensionsEnabled(BitArray extensions)
   {
-    return _enabledExtensions.And(extensions).HasAnySet();
+    var enabled = new BitArray(_enabledExtensions);
+    enabled.And(extensions);
+    return enabled.Equals(extensions);
   }
 
   public void EnableExtension<T>() where T : class, IXmppClientExtension<T>
@@ -623,18 +628,25 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
     _extensions[T.ExtensionIdentifier] = extension;
     
     _enabledExtensions[T.ExtensionIdentifier] = true;
-    _loadExtensionAt[(int)T.LoadAt][T.ExtensionIdentifier] = true;
+
+    if (!_extensionsActivateOn.ContainsKey(T.ActivateOn))
+      _extensionsActivateOn[T.ActivateOn] = [];
+    _extensionsActivateOn[T.ActivateOn].Add(extension);
+
+    if (T.ActivateOn == XmppClientExtensionActivateOn.Instant)
+      _ = Task.Run(async () => await extension.ActivateAsync());
   }
 
   public async Task DisableExtension<T>() where T : class, IXmppClientExtension<T>
   {
     var ext = GetExtension<T>();
-    if (ext != null)
+    if (ext != null) {
       await ext.DisposeAsync();
+      _extensionsActivateOn[T.ActivateOn].Remove(ext);
+    }
     
     _extensions.Remove(T.ExtensionIdentifier);
     _enabledExtensions[T.ExtensionIdentifier] = false;
-    _loadExtensionAt[(int)T.LoadAt][T.ExtensionIdentifier] = false;
   }
 
   public T? GetExtension<T>() where T : class, IXmppClientExtension<T>
@@ -645,24 +657,15 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
     return _extensions[T.ExtensionIdentifier] as T;
   }
 
-  private async Task LoadExtensions(XmppClientExtensionLoadAt load)
+  private async Task ActivateExtensions(XmppClientExtensionActivateOn activateOn)
   {
-    var enabled = _loadExtensionAt[(int)load];
-    for (var i = 0; i < enabled.Length; i++)
-    {
-      if (!enabled[i]) continue;
-      await _extensions[i].LoadAsync();
-    }
-  }
-  
-  private async Task ActivateExtensions(XmppClientExtensionLoadAt load)
-  {
-    var enabled = _loadExtensionAt[(int)load];
-    for (var i = 0; i < enabled.Length; i++)
-    {
-      if (!enabled[i]) continue;
-      await _extensions[i].ActivateAsync();
-    }
+    _extensionsActivateOn.TryGetValue(activateOn, out var extensions);
+    
+    if (extensions is null)
+      return;
+    
+    foreach (var extension in extensions)
+      await extension.ActivateAsync();
   }
 
   #endregion
@@ -718,6 +721,8 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
   
   public async Task SaslCompleted()
   {
+    // The SaslCompleted Handler, opens the new XmppStream that advertises Resource Binding
+    await ActivateExtensions(XmppClientExtensionActivateOn.SaslComplete);
     await OpenXmppStream();
   }
   
@@ -727,6 +732,8 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
     {
       if (args.Feature is not SaslFeature sasl)
         return;
+
+      await ActivateExtensions(XmppClientExtensionActivateOn.SaslBegin);
 
       Console.WriteLine("Supported SASL mechanisms:");
       sasl.Mechanisms.ForEach(Console.WriteLine);
@@ -750,6 +757,8 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
     {
       if (args.Feature is not BindFeature)
         return;
+      
+      await ActivateExtensions(XmppClientExtensionActivateOn.BindBegin);
 
       var resource = Credentials.Jid.Resource ?? Guid.NewGuid().ToString();
       Console.WriteLine($"Binding to resource {Credentials.Jid.Resource}");
@@ -784,10 +793,7 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
 
       State = XmppState.Connected;
 
-      await LoadExtensions(XmppClientExtensionLoadAt.AndActivateOnSuccess);
-      await ActivateExtensions(XmppClientExtensionLoadAt.AndActivateOnSuccess);
-      
-      EnableExtension<ImExtension>();
+      await ActivateExtensions(XmppClientExtensionActivateOn.BindComplete);
     }
     catch (Exception)
     {
