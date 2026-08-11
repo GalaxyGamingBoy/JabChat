@@ -13,6 +13,9 @@ public record RosterItem
 
   [XmlAttribute("subscription")]
   public RosterItemSubscription Subscription { get; init; } = RosterItemSubscription.None;
+  
+  [XmlAttribute("approved")]
+  public bool Approved { get; init; }
 
   [XmlElement("group")]
   public List<string> Groups { get; init; } = [];

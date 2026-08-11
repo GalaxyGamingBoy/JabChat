@@ -38,6 +38,31 @@ using RequestPresenceSubscriptionResult = OneOf<
   SendPresenceResults.WriterNullException
 >;
 
+using RequestPresenceUnsubscriptionResult = OneOf<
+  Unit,
+  SendPresenceResults.SerializationFailure,
+  SendPresenceResults.WriterNullException
+>;
+
+using ApprovePresenceSubscriptionResult = OneOf<
+  Unit,
+  SendPresenceResults.SerializationFailure,
+  SendPresenceResults.WriterNullException
+>;
+
+using CancelPresenceSubscriptionResult = OneOf<
+  Unit,
+  SendPresenceResults.SerializationFailure,
+  SendPresenceResults.WriterNullException
+>;
+
+using PreApprovePresenceSubscriptionResult = OneOf<
+  Unit,
+  PreApprovePresenceSubscriptionResults.PreApprovalNotSupported,
+  SendPresenceResults.SerializationFailure,
+  SendPresenceResults.WriterNullException
+>; 
+
 public class ImExtension : IXmppClientExtension<ImExtension>
 {
   public static int ExtensionIdentifier => 0;
@@ -51,18 +76,31 @@ public class ImExtension : IXmppClientExtension<ImExtension>
     return Task.CompletedTask;
   }
 
-  public List<RosterItem> RosterItems = [];
-  
-  public string CachedVersion = string.Empty;
+  private readonly Lock _rosterLock = new();
+  private List<RosterItem> _rosterItems = [];
 
-  public bool RosterVersioningEnabled { get; set; } = false;
+  public IReadOnlyList<RosterItem> RosterItems
+  {
+    get
+    {
+      lock (_rosterLock)
+        return _rosterItems.ToList();
+    }
+  }
+
+  public string CachedVersion { get; private set; } = string.Empty;
+
+  private bool _rosterVersioningEnabled;
+  private bool _presencePreApprovalEnabled;
   
   private readonly IXmppClient _client;
 
   static ImExtension()
   {
     XmppClientRegistry.RegisterInfoQuery<InfoQueryRoster>();
+    
     XmppClientRegistry.RegisterFeature<ImRosterVersioningFeature>();
+    XmppClientRegistry.RegisterFeature<ImPresencePreApproval>();
   }
 
   public ImExtension(IXmppClient client)
@@ -72,10 +110,12 @@ public class ImExtension : IXmppClientExtension<ImExtension>
     _client.StreamFeatureAdvertised += ClientOnStreamFeatureAdvertised;
   }
 
-  void ClientOnStreamFeatureAdvertised(object? sender, StreamFeatureRequestedEventArgs e)
+  private void ClientOnStreamFeatureAdvertised(object? sender, StreamFeatureRequestedEventArgs e)
   {
     if (e.Feature is ImRosterVersioningFeature)
-      RosterVersioningEnabled = true;
+      _rosterVersioningEnabled = true;
+    if (e.Feature is ImPresencePreApproval)
+      _presencePreApprovalEnabled = true;
   }
 
   /// <summary>
@@ -92,7 +132,7 @@ public class ImExtension : IXmppClientExtension<ImExtension>
   public async Task<GetRosterResult> GetRoster()
   {
     var iq = new InfoQuery(type: InfoQueryType.Get) { From =  _client.ConnectedJid.ToString() };
-    iq.AddExtensionObject(new InfoQueryRoster { Version = RosterVersioningEnabled ? CachedVersion : null });
+    iq.AddExtensionObject(new InfoQueryRoster { Version = _rosterVersioningEnabled ? CachedVersion : null });
     
     var result = await _client.SendInfoQueryAsync(iq);
     return result.Match<GetRosterResult>(
@@ -101,9 +141,10 @@ public class ImExtension : IXmppClientExtension<ImExtension>
         var roster = iqr.GetExtensionObject<InfoQueryRoster>();
         if (roster is null) return new Unit();
         
+        lock (_rosterLock)
+          _rosterItems = roster.RosterItems;
         CachedVersion = roster.Version ?? string.Empty;
         
-        RosterItems = roster.RosterItems;
         return new Unit();
       },
       infoQueryError => infoQueryError,
@@ -130,7 +171,8 @@ public class ImExtension : IXmppClientExtension<ImExtension>
       _ => new Unit(),
       infoQueryError =>
       {
-        return infoQueryError.StanzaError.Errors[0] switch
+        var error = infoQueryError.StanzaError.Errors.FirstOrDefault() ?? new GenericError();
+        return error switch
         {
           BadRequest => new UpsertRosterItemResults.DuplicateGroups(),
           NotAcceptable => new UpsertRosterItemResults.LengthLimit(),
@@ -157,14 +199,15 @@ public class ImExtension : IXmppClientExtension<ImExtension>
       _ => throw new UnreachableException(),
       infoQueryError =>
       {
-        return infoQueryError.StanzaError.Errors[0] switch
+        var error = infoQueryError.StanzaError.Errors.FirstOrDefault() ?? new GenericError();
+        return error switch
         {
           ItemNotFound => new DeleteRosterItemResults.ItemNotFound(),
           _ => infoQueryError
         };
       },
-      infoQueryError => infoQueryError,
-      serializationFailure => serializationFailure);
+      serializationFailure => serializationFailure,
+      writerNullException => writerNullException);
   }
 
   /// <summary>
@@ -178,6 +221,79 @@ public class ImExtension : IXmppClientExtension<ImExtension>
   {
     var presence = new Presence.Presence() { To = jid, Type = PresenceType.Subscribe };
     return (await _client.SendPresenceAsync(presence)).Match<RequestPresenceSubscriptionResult>(
+      unit => unit,
+      serializationFailure => serializationFailure,
+      writerNullException => writerNullException
+      );
+  }
+  
+  /// <summary>
+  /// Request an unsubscription of presence updates of a JID
+  /// </summary>
+  /// <param name="jid">The bare JID of the entity to subscribe to</param>
+  /// <seealso href="https://xmpp.org/rfcs/rfc6121.html#sub-unsub">
+  /// RFC6121 - 3.3. Unsubscribing
+  /// </seealso>
+  public async Task<RequestPresenceUnsubscriptionResult> RequestPresenceUnsubscription(string jid)
+  {
+    var presence = new Presence.Presence() { To = jid, Type = PresenceType.Unsubscribe };
+    return (await _client.SendPresenceAsync(presence)).Match<RequestPresenceUnsubscriptionResult>(
+      unit => unit,
+      serializationFailure => serializationFailure,
+      writerNullException => writerNullException
+    );
+  }
+
+  /// <summary>
+  /// Approve a presence subscription to a JID.
+  /// </summary>
+  /// <param name="jid">The bare JID of the entity to accept</param>
+  /// <seealso href="https://xmpp.org/rfcs/rfc6121.html#sub-request-handle">
+  /// RFC6121 - 3.1.4. Client Processing of Inbound Subscription Request
+  /// </seealso>
+  public async Task<ApprovePresenceSubscriptionResult> ApprovePresenceSubscription(string jid)
+  {
+    var presence = new Presence.Presence() { To = jid, Type = PresenceType.Subscribed };
+    return (await _client.SendPresenceAsync(presence)).Match<ApprovePresenceSubscriptionResult>(
+      unit => unit,
+      serializationFailure => serializationFailure,
+      writerNullException => writerNullException
+      );
+  }
+  
+  /// <summary>
+  /// Cancel a presence subscription to a JID.
+  /// </summary>
+  /// <param name="jid">The bare JID of the entity to deny</param>
+  /// <seealso href="https://xmpp.org/rfcs/rfc6121.html#sub-request-handle">
+  /// RFC6121 - 3.1.4. Client Processing of Inbound Subscription Request
+  /// </seealso>
+  /// <seealso href="https://xmpp.org/rfcs/rfc6121.html#sub-cancel">
+  /// RFC6121 - 3.2. Canceling a Subscription
+  /// </seealso>
+  public async Task<CancelPresenceSubscriptionResult> CancelPresenceSubscription(string jid)
+  {
+    var presence = new Presence.Presence() { To = jid, Type = PresenceType.Unsubscribed };
+    return (await _client.SendPresenceAsync(presence)).Match<CancelPresenceSubscriptionResult>(
+      unit => unit,
+      serializationFailure => serializationFailure,
+      writerNullException => writerNullException
+    );
+  }
+
+  /// <summary>
+  /// Preapprove a presence subscription to a JID.
+  /// </summary>
+  /// <param name="jid">The bare JID of the entity to preapprove</param>
+  /// <seealso href="https://xmpp.org/rfcs/rfc6121.html#sub-preapproval">
+  /// RFC6121 - 3.4. Pre-Approving a Subscription Request
+  /// </seealso>
+  public async Task<PreApprovePresenceSubscriptionResult> PreApprovePresenceSubscriptionResult(string jid)
+  {
+    if (!_presencePreApprovalEnabled)
+      return new PreApprovePresenceSubscriptionResults.PreApprovalNotSupported();
+    
+    return (await ApprovePresenceSubscription(jid)).Match<PreApprovePresenceSubscriptionResult>(
       unit => unit,
       serializationFailure => serializationFailure,
       writerNullException => writerNullException
@@ -198,22 +314,28 @@ public class ImExtension : IXmppClientExtension<ImExtension>
     if (e.InfoQuery.From is not null && e.InfoQuery.From != _client.ConnectedJid.BareJid)
       return;
 
-    CachedVersion = rosterPushIq.Version ?? string.Empty;
+    if (_rosterVersioningEnabled)
+      CachedVersion = rosterPushIq.Version ?? string.Empty;
     
-    var serverItem = rosterPushIq.RosterItems.Single();
-    var hasJid = RosterItems.Count(r => r.Jid == serverItem.Jid) == 1;
-    if (hasJid)
-      RosterItems.RemoveAll(r => r.Jid == serverItem.Jid);
-    if (serverItem.Subscription != RosterItemSubscription.Remove)
-      RosterItems.Add(serverItem);
+    if (rosterPushIq.RosterItems.Count != 1)
+      return;
     
-    var iq = new InfoQuery(type: InfoQueryType.Result) { From = _client.ConnectedJid.ToString() };
+    lock (_rosterLock) {
+      var serverItem = rosterPushIq.RosterItems.Single();
+      _rosterItems.RemoveAll(r => r.Jid == serverItem.Jid);
+      if (serverItem.Subscription != RosterItemSubscription.Remove)
+        _rosterItems.Add(serverItem);
+    }
+    
+    var iq = new InfoQuery(type: InfoQueryType.Result) { From = _client.ConnectedJid.ToString(), Id = e.InfoQuery.Id };
     _ = Task.Run(async () => await _client.SendInfoQueryAsync(iq));
   }
   
   public ValueTask DisposeAsync()
   {
     _client.OnUnexpectedInfoQueryReceived -= OnUnexpectedInfoQueryReceived;
+    _client.StreamFeatureAdvertised -= ClientOnStreamFeatureAdvertised;
+    
     return new ValueTask();
   }
 }

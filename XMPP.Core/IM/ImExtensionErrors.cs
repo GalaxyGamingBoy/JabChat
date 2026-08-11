@@ -22,3 +22,11 @@ public static class DeleteRosterItemResults
     public string What() => "The roster item could not be found.";
   }
 }
+
+public static class PreApprovePresenceSubscriptionResults
+{
+  public record PreApprovalNotSupported : IClientError
+  {
+    public string What() => "Presence pre-approval is not supported by the current XMPP server.";
+  }
+}
