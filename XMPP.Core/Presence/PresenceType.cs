@@ -13,5 +13,7 @@ public enum PresenceType
   [XmlEnum("unsubscribed")]
   Unsubscribed,
   [XmlEnum("unavailable")]
-  Unavailable
+  Unavailable,
+  [XmlEnum("probe")]
+  Probe,
 }

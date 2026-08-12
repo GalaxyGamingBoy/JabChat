@@ -63,6 +63,12 @@ using PreApprovePresenceSubscriptionResult = OneOf<
   SendPresenceResults.WriterNullException
 >; 
 
+using SendInitialPresenceResult = OneOf<
+  Unit,
+  SendPresenceResults.SerializationFailure,
+  SendPresenceResults.WriterNullException
+>;
+
 public class ImExtension : IXmppClientExtension<ImExtension>
 {
   public static int ExtensionIdentifier => 0;
@@ -298,6 +304,18 @@ public class ImExtension : IXmppClientExtension<ImExtension>
       serializationFailure => serializationFailure,
       writerNullException => writerNullException
       );
+  }
+
+  /// <summary>
+  /// Notify the server of the clients initial online presence
+  /// </summary>
+  /// <seealso href="https://xmpp.org/rfcs/rfc6121.html#presence-initial">
+  /// RFC6121 - 4.2. Initial Presence
+  /// </seealso>
+  public async Task<SendInitialPresenceResult> SendInitialPresence()
+  {
+    var iq = new Presence.Presence();
+    return await _client.SendPresenceAsync(iq);
   }
 
   /// <summary>
