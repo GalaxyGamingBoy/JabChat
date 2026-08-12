@@ -437,9 +437,11 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
   
   private readonly XmlSerializer _infoQuerySerializer = new(typeof(InfoQuery));
 
-  private void ReadInfoQuery(XmlReader reader)
+  private async Task ReadInfoQuery(XmlReader reader)
   {
     using var sub = reader.ReadSubtree();
+    await sub.ReadAsync();
+    
     var infoQuery = (InfoQuery?)_infoQuerySerializer.Deserialize(sub);
     if (infoQuery == null)
       return;
@@ -459,13 +461,14 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
   
   private readonly XmlSerializer _messageSerializer = new(typeof(Message));
 
-  private void ReadMessage(XmlReader reader)
+  private async Task ReadMessage(XmlReader reader)
   {
     ReadLock.Release();
     
     using var sub = reader.ReadSubtree();
-    var message = (Message?)_messageSerializer.Deserialize(sub);
+    await sub.ReadAsync();
     
+    var message = (Message?)_messageSerializer.Deserialize(sub);
     if (message == null) return;
     
     if (message.StanzaError is not null)
@@ -479,20 +482,17 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
 
   private readonly XmlSerializer _presenceSerializer = new(typeof(Presence.Presence));
 
-  private void ReadPresence(XmlReader reader)
+  private async Task ReadPresence(XmlReader reader)
   {
     ReadLock.Release();
     
     using var sub = reader.ReadSubtree();
+    await sub.ReadAsync();
+    
     var presence = (Presence.Presence?)_presenceSerializer.Deserialize(sub);
-
     if (presence == null) return;
-
-    if (presence.StanzaError is not null)
-    {
-      var errors = ParseStanzaErrors(presence.StanzaError.InternalErrors);
-      presence.StanzaError.Errors = errors;
-    }
+    
+    presence.StanzaError?.Errors = ParseStanzaErrors(presence.StanzaError.InternalErrors);
     
     OnPresenceReceived?.Invoke(this, new OnPresenceReceivedEventArgs { Presence = presence });
   }
@@ -592,7 +592,7 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
           ReadMessage(reader);
           break;
         case "presence":
-          ReadPresence(reader);
+          await ReadPresence(reader);
           break;
         default:
           ReadUnexpectedStanza(reader);
@@ -773,6 +773,13 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
       };
 
       var result = await SendInfoQueryAsync(query);
+      if (result.IsT1)
+      {
+        var errors = result.AsT1.StanzaError.Errors.Select(e => e.What());
+        InvokeClientError(new BindError(resource, string.Join(Environment.NewLine, errors)));
+        return;
+      }
+      
       if (!result.IsT0)
       {
         InvokeClientError(new BindError(resource, (result.Value as IClientError)?.What()!));
@@ -780,13 +787,6 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
       }
       
       var iq = result.AsT0;
-      
-      
-      if (iq.Type == InfoQueryType.Error)
-      {
-        var errors = iq.StanzaError!.Errors.Select(e => e.What());
-        InvokeClientError(new BindError(resource, string.Join(Environment.NewLine, errors)));
-      }
       
       _fullJid = Credentials.Jid with { Resource = iq.ResourceBind!.Resource };
       Console.WriteLine($"XMPP Client Connected to JID {_fullJid}");

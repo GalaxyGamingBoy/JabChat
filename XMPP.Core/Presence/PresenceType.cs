@@ -4,6 +4,8 @@ namespace XMPP.Core.Presence;
 
 public enum PresenceType
 {
+  [XmlEnum("none")]
+  None,
   [XmlEnum("subscribe")]
   Subscribe,
   [XmlEnum("unsubscribe")]
@@ -16,4 +18,6 @@ public enum PresenceType
   Unavailable,
   [XmlEnum("probe")]
   Probe,
+  [XmlEnum("error")]
+  Error,
 }

@@ -10,7 +10,7 @@ public record StanzaError
   public ErrorType Type { get; init; }
 
   [XmlAnyElement]
-  internal List<XmlElement> InternalErrors { get; init; } = [];
+  public List<XmlElement> InternalErrors { get; set; } = [];
 
   [XmlIgnore]
   public List<IClientError> Errors { get; set; } = [];

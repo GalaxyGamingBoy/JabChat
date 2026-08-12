@@ -1,8 +1,10 @@
 using System.CommandLine;
+using System.Reflection.Metadata;
 using Spectre.Console;
 using XMPP.Core;
 using XMPP.Core.Backend;
 using XMPP.Core.Errors;
+using XMPP.Core.Presence;
 
 namespace Cli.Commands.Client;
 
@@ -49,6 +51,7 @@ public class ConnectCommand : Command
     root.Subcommands.Add(new Repl.StateCommand(client));
     root.Subcommands.Add(new Repl.ReadLockCommand(client));
     root.Subcommands.Add(new Repl.RosterCommand(client));
+    root.Subcommands.Add(new Repl.PresenceCommand(client));
     
     _replCommands = root;
   }
@@ -96,6 +99,18 @@ public class ConnectCommand : Command
     client.ClientErrorRaised += (_, err) =>
     {
       AnsiConsole.MarkupLine($"[bold red]ERR: {err.Error.What()}[/]");
+    };
+    client.OnPresenceReceived += (_, prs) =>
+    {
+      if (prs.Presence.Type == PresenceType.Error)
+        foreach (var error in prs.Presence.StanzaError!.Errors)
+          AnsiConsole.MarkupLine($"[bold red]* {error.What()}[/]");
+      else
+        AnsiConsole.MarkupLine($"[bold cyan](presence)[/] {prs.Presence}");
+    };
+    client.OnMessageReceived += (_, msg) =>
+    {
+      AnsiConsole.MarkupLine($"[cyan](message)[/] {msg.Message}");
     };
     
     AnsiConsole.MarkupLine($"Connecting to [yellow]{host}[/]... (Press any key to exit)");

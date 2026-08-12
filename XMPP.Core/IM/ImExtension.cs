@@ -220,12 +220,15 @@ public class ImExtension : IXmppClientExtension<ImExtension>
   /// Request a presence subscription to a JID.
   /// </summary>
   /// <param name="jid">The bare JID of the entity to subscribe to</param>
+  /// <param name="reason">The reason why a presence subscription was requested</param>
   /// <seealso href="https://xmpp.org/rfcs/rfc6121.html#sub-request">
   /// RFC6121 - 3.1. Requesting a Subscription
   /// </seealso>
-  public async Task<RequestPresenceSubscriptionResult> RequestPresenceSubscription(string jid)
+  public async Task<RequestPresenceSubscriptionResult> RequestPresenceSubscription(string jid, string? reason)
   {
-    var presence = new Presence.Presence() { To = jid, Type = PresenceType.Subscribe };
+    List<string>? status = reason is null ? null : [reason];
+    
+    var presence = new Presence.Presence() { To = jid, Type = PresenceType.Subscribe, Status = status };
     return (await _client.SendPresenceAsync(presence)).Match<RequestPresenceSubscriptionResult>(
       unit => unit,
       serializationFailure => serializationFailure,
@@ -314,8 +317,95 @@ public class ImExtension : IXmppClientExtension<ImExtension>
   /// </seealso>
   public async Task<SendInitialPresenceResult> SendInitialPresence()
   {
-    var iq = new Presence.Presence();
+    var iq = new Presence.Presence() {Type = PresenceType.None};
     return await _client.SendPresenceAsync(iq);
+  }
+
+  /// <summary>
+  /// Send a presence update to subscribed entities
+  /// </summary>
+  /// <param name="update">Presence update to send</param>
+  /// <seealso href="https://xmpp.org/rfcs/rfc6121.html#presence-broadcast">
+  /// RFC6121 - 4.4. Subsequent Presence Broadcast
+  /// </seealso>
+  public async Task SendPresenceUpdate(PresenceUpdate update)
+  {
+    List<string>? status = update.Status is null ? null : [update.Status];
+    var presence = new Presence.Presence() {
+      Type = PresenceType.None,
+      Show = update.Show,
+      Status = status,
+      Priority =  update.Priority,
+    };
+    
+    await _client.SendPresenceAsync(presence);
+  }
+  /// <summary>
+  /// Send a presence update directly to an entity
+  /// </summary>
+  /// <param name="jid">JID to send the presence update tp</param>
+  /// <param name="update">Presence update to send</param>
+  /// <seealso href="https://xmpp.org/rfcs/rfc6121.html#presence-broadcast">
+  /// RFC6121 - 4.4. Subsequent Presence Broadcast
+  /// </seealso>
+  /// <seealso href="https://xmpp.org/rfcs/rfc6121.html#presence-directed">
+  /// RFC6121 - 4.6. Directed Presence
+  /// </seealso>
+  public async Task SendDirectedPresenceUpdate(string jid, PresenceUpdate update)
+  {
+    List<string>? status = update.Status is null ? null : [update.Status];
+    var presence = new Presence.Presence() {
+      Type = PresenceType.None,
+      Show = update.Show,
+      Status = status,
+      Priority =  update.Priority,
+      To = jid,
+    };
+    
+    await _client.SendPresenceAsync(presence);
+  }
+
+  /// <summary>
+  /// Send a presence update notified subscribed entities that it will go offline
+  /// </summary>
+  /// <param name="reason">The reason the entity will go offline</param>
+  /// <seealso href="https://xmpp.org/rfcs/rfc6121.html#presence-unavailable">
+  /// RFC6121 - 4.5. Unavailable Presence
+  /// </seealso>
+  public async Task SendOfflinePresence(string? reason)
+  {
+    List<string>? status = reason is null ? null : [reason];
+    var presence = new Presence.Presence()
+    {
+      Type = PresenceType.Unavailable,
+      Status = status
+    };
+    
+    await _client.SendPresenceAsync(presence);
+  }
+  
+  /// <summary>
+  /// Send a presence update notifying the specified entity that it will go offline
+  /// </summary>
+  /// <param name="jid">JID to send the presence update tp</param>
+  /// <param name="reason">The reason the entity will go offline</param>
+  /// <seealso href="https://xmpp.org/rfcs/rfc6121.html#presence-unavailable">
+  /// RFC6121 - 4.5. Unavailable Presence
+  /// </seealso>
+  /// <seealso href="https://xmpp.org/rfcs/rfc6121.html#presence-directed">
+  /// RFC6121 - 4.6. Directed Presence
+  /// </seealso>
+  public async Task SendDirectedOfflinePresence(string jid, string? reason)
+  {
+    List<string>? status = reason is null ? null : [reason];
+    var presence = new Presence.Presence()
+    {
+      Type = PresenceType.Unavailable,
+      Status = status,
+      To = jid,
+    };
+    
+    await _client.SendPresenceAsync(presence);
   }
 
   /// <summary>
