@@ -1,8 +1,10 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using OneOf;
 using XMPP.Core.Errors;
 using XMPP.Core.EventArgs;
 using XMPP.Core.InfoQueries;
+using XMPP.Core.Messages;
 using XMPP.Core.Presence;
 using XMPP.Core.StanzaErrors;
 
@@ -69,6 +71,12 @@ using SendInitialPresenceResult = OneOf<
   SendPresenceResults.WriterNullException
 >;
 
+using SendMessageResult = OneOf<
+  Unit,
+  SendMessageResults.SerializationFailure,
+  SendMessageResults.WriterNullException
+>;
+
 public class ImExtension : IXmppClientExtension<ImExtension>
 {
   public static int ExtensionIdentifier => 0;
@@ -95,6 +103,8 @@ public class ImExtension : IXmppClientExtension<ImExtension>
   }
 
   public string CachedVersion { get; private set; } = string.Empty;
+  
+  private readonly ConcurrentDictionary<string, ImMessageCache> _messageCache = new();
 
   private bool _rosterVersioningEnabled;
   private bool _presencePreApprovalEnabled;
@@ -114,6 +124,7 @@ public class ImExtension : IXmppClientExtension<ImExtension>
     _client = client;
     _client.OnUnexpectedInfoQueryReceived += OnUnexpectedInfoQueryReceived;
     _client.StreamFeatureAdvertised += ClientOnStreamFeatureAdvertised;
+    _client.OnMessageReceived += OnMessageReceived;
   }
 
   private void ClientOnStreamFeatureAdvertised(object? sender, StreamFeatureRequestedEventArgs e)
@@ -409,6 +420,36 @@ public class ImExtension : IXmppClientExtension<ImExtension>
   }
 
   /// <summary>
+  /// Send a message to a user
+  /// </summary>
+  /// <param name="message">Message contents</param>
+  /// <seealso href="https://xmpp.org/rfcs/rfc6121.html#message">
+  /// RFC6121 - 5. Exchanging Messages
+  /// </seealso>
+  public async Task<SendMessageResult> SendMessage(ImMessage message)
+  {
+    var key = $"{nameof(MessageType.Chat)};{message.ToBare}";
+    _messageCache.TryGetValue(key, out var cached);
+    
+    // XEP0201 - If an entity receives a message of type "chat" without a thread ID,
+    // then it SHOULD create a new session with a new thread ID (and include that thread ID
+    // in all the messages it sends within the new session)
+    // href: https://xmpp.org/extensions/xep-0201.html#chat
+    var thread = cached?.Thread ?? new MessageThread { Body = Guid.NewGuid().ToString() };
+    var to = cached?.FromFullJid ?? message.ToBare;
+    
+    var msg = new Message
+    {
+      To = to,
+      From = _client.ConnectedJid.ToString(),
+      Thread = thread,
+      Type = MessageType.Chat
+    };
+
+    return await _client.SendMessageAsync(msg);
+  }
+
+  /// <summary>
   /// Handle Roster Push Queries
   /// </summary>
   /// <seealso href="https://xmpp.org/rfcs/rfc6121.html#roster-syntax-actions-push">
@@ -438,11 +479,27 @@ public class ImExtension : IXmppClientExtension<ImExtension>
     var iq = new InfoQuery(type: InfoQueryType.Result) { From = _client.ConnectedJid.ToString(), Id = e.InfoQuery.Id };
     _ = Task.Run(async () => await _client.SendInfoQueryAsync(iq));
   }
+
+  /// <summary>
+  /// Handle message thread and jid updates
+  /// </summary>
+  /// <seealso href="https://xmpp.org/rfcs/rfc6121.html#message-syntax-thread">
+  /// RFC6121 - 5.2.5. Thread Element
+  /// </seealso>
+  private void OnMessageReceived(object? sender, OnMessageReceivedEventArgs e)
+  {
+    if (e.Message.Thread is null) return;
+    
+    var bareFrom = e.Message.From.Split("/")[0];
+    var key = $"{e.Message.Type.ToString()};{bareFrom}";
+    _messageCache[key] = new ImMessageCache(bareFrom, e.Message.Thread);
+  }
   
   public ValueTask DisposeAsync()
   {
     _client.OnUnexpectedInfoQueryReceived -= OnUnexpectedInfoQueryReceived;
     _client.StreamFeatureAdvertised -= ClientOnStreamFeatureAdvertised;
+    _client.OnMessageReceived -= OnMessageReceived;
     
     return new ValueTask();
   }
