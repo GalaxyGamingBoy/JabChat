@@ -132,22 +132,14 @@ public interface IXmppClient
   /// <typeparam name="T">Stanza Element</typeparam>
   public OneOf<
     Unit,
-    RegisterUnexpectedStanzaResults.AmbiguousAttributeMatch,
-    RegisterUnexpectedStanzaResults.StanzaNameMissing,
-    RegisterUnexpectedStanzaResults.StanzaNamespaceMissing,
     RegisterUnexpectedStanzaResults.UnexpectedStanzaAlreadyRegistered
-  > RegisterUnexpectedStanza<T>(Func<object, object?, Task> func);
+  > RegisterUnexpectedStanza<T>(Func<object, object?, Task> func) where T : IXmppStanzaKey<T>;
   
   /// <summary>
   /// Unregisters an unexpected stanza
   /// </summary>
   /// <typeparam name="T">Stanza Element</typeparam>
-  public OneOf<
-    Unit,
-    UnregisterUnexpectedStanzaResults.AmbiguousAttributeMatch,
-    UnregisterUnexpectedStanzaResults.StanzaNameMissing,
-    UnregisterUnexpectedStanzaResults.StanzaNamespaceMissing
-  > UnregisterUnexpectedStanza<T>();
+  public void UnregisterUnexpectedStanza<T>() where T : IXmppStanzaKey<T>;
 
   /// <summary>
   /// Registers a SaslMechanism

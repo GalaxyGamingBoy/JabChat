@@ -75,17 +75,7 @@ using SendMessageResult = OneOf<
 
 using RegisterUnexpectedStanzaResult = OneOf<
   Unit,
-  RegisterUnexpectedStanzaResults.AmbiguousAttributeMatch,
-  RegisterUnexpectedStanzaResults.StanzaNameMissing,
-  RegisterUnexpectedStanzaResults.StanzaNamespaceMissing,
   RegisterUnexpectedStanzaResults.UnexpectedStanzaAlreadyRegistered
->;
-
-using UnregisterUnexpectedStanzaResult = OneOf<
-  Unit,
-  UnregisterUnexpectedStanzaResults.AmbiguousAttributeMatch,
-  UnregisterUnexpectedStanzaResults.StanzaNameMissing,
-  UnregisterUnexpectedStanzaResults.StanzaNamespaceMissing
 >;
 
 public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDisposable
@@ -339,51 +329,21 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
   #region Element Registrations
 
   public RegisterUnexpectedStanzaResult RegisterUnexpectedStanza<T>(Func<object, object?, Task> func)
+    where T : IXmppStanzaKey<T>
   {
-    try
-    {
-      var attr = (XmlRootAttribute?)Attribute.GetCustomAttribute(
-        typeof(T), typeof(XmlRootAttribute));
+    var key = T.ToStanzaKey();
+    if (_unexpectedStanzaSerializers.ContainsKey(key))
+      return new RegisterUnexpectedStanzaResults.UnexpectedStanzaAlreadyRegistered(key);
 
-      if (attr?.ElementName == null)
-        return new RegisterUnexpectedStanzaResults.StanzaNameMissing();
-      if (attr.Namespace == null)
-        return new RegisterUnexpectedStanzaResults.StanzaNamespaceMissing();
-
-      var key = $"{attr.Namespace}/{attr.ElementName}";
-
-      if (_unexpectedStanzaSerializers.ContainsKey(key))
-        return new RegisterUnexpectedStanzaResults.UnexpectedStanzaAlreadyRegistered(key);
-
-      _unexpectedStanzaSerializers.Add(key, (new XmlSerializer(typeof(T)), func));
-      return new Unit();
-    }
-    catch (AmbiguousMatchException)
-    {
-      return new RegisterUnexpectedStanzaResults.AmbiguousAttributeMatch();
-    }
+    _unexpectedStanzaSerializers.Add(key, (new XmlSerializer(typeof(T)), func));
+    return new Unit();
   }
   
-  public UnregisterUnexpectedStanzaResult UnregisterUnexpectedStanza<T>()
+  public void UnregisterUnexpectedStanza<T>()
+    where T : IXmppStanzaKey<T>
   {
-    try
-    {
-      var attr = (XmlRootAttribute?)Attribute.GetCustomAttribute(
-        typeof(T), typeof(XmlRootAttribute));
-
-      if (attr?.ElementName == null)
-        return new UnregisterUnexpectedStanzaResults.StanzaNameMissing();
-      if (attr.Namespace == null)
-        return new UnregisterUnexpectedStanzaResults.StanzaNamespaceMissing();
-
-      var key = $"{attr.Namespace}/{attr.ElementName}";
-      _unexpectedStanzaSerializers.Remove(key);
-      return new Unit();
-    }
-    catch (AmbiguousMatchException)
-    {
-      return new UnregisterUnexpectedStanzaResults.AmbiguousAttributeMatch();
-    }
+    var key = T.ToStanzaKey();
+    _unexpectedStanzaSerializers.Remove(key);
   }
   
   public void RegisterSaslMechanism<T>() where T : ISaslMechanism, new()
