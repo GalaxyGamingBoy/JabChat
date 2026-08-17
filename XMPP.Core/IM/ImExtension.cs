@@ -443,7 +443,8 @@ public class ImExtension : IXmppClientExtension<ImExtension>
       To = to,
       From = _client.ConnectedJid.ToString(),
       Thread = thread,
-      Type = MessageType.Chat
+      Type = MessageType.Chat,
+      ExtensionElements = message.ExtensionElements
     };
 
     return await _client.SendMessageAsync(msg);

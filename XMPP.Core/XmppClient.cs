@@ -1,6 +1,5 @@
 using System.Collections;
 using System.Diagnostics;
-using System.Reflection;
 using System.Text;
 using System.Xml;
 using System.Xml.Linq;
@@ -449,12 +448,9 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
     
     var message = (Message?)_messageSerializer.Deserialize(sub);
     if (message == null) return;
-    
-    if (message.StanzaError is not null)
-    {
-      var errors = ParseStanzaErrors(message.StanzaError.InternalErrors);
-      message.StanzaError.Errors = errors;
-    }
+
+    message.StanzaError?.Errors = ParseStanzaErrors(message.StanzaError.InternalErrors);
+    message.DeserializeExtensions();
 
     OnMessageReceived?.Invoke(this, new OnMessageReceivedEventArgs { Message = message });
   }
@@ -472,6 +468,7 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
     if (presence == null) return;
     
     presence.StanzaError?.Errors = ParseStanzaErrors(presence.StanzaError.InternalErrors);
+    presence.DeserializeExtensions();
     
     OnPresenceReceived?.Invoke(this, new OnPresenceReceivedEventArgs { Presence = presence });
   }
