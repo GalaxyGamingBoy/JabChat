@@ -2,7 +2,7 @@ using XMPP.Core.Errors;
 
 namespace XMPP.Core.SaslErrors;
 
-public record ServerSignatureMismatch(string Mechanism) : IClientError
+public record ServerSignatureMismatch(string Mechanism) : IClientError, IDefaultStanzaKey<ServerSignatureMismatch>
 {
   public string What()
   {

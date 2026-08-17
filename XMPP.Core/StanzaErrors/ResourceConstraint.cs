@@ -7,7 +7,7 @@ namespace XMPP.Core.StanzaErrors;
 /// https://datatracker.ietf.org/doc/html/rfc6120#section-8.3.3.18
 /// </summary>
 [XmlRoot("resource-constraint", Namespace = "urn:ietf:params:xml:ns:xmpp-stanzas")]
-public record ResourceConstraint : IClientError
+public record ResourceConstraint : IClientError, IDefaultStanzaKey<ResourceConstraint>
 {
   public string What()
   {

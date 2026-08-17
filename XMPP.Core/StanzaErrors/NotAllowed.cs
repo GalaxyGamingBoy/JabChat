@@ -7,7 +7,7 @@ namespace XMPP.Core.StanzaErrors;
 /// https://datatracker.ietf.org/doc/html/rfc6120#section-8.3.3.10
 /// </summary>
 [XmlRoot("not-allowed", Namespace = "urn:ietf:params:xml:ns:xmpp-stanzas")]
-public record NotAllowed : IClientError
+public record NotAllowed : IClientError, IDefaultStanzaKey<NotAllowed>
 {
   public string What()
   {

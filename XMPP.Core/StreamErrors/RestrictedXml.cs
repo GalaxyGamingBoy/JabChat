@@ -7,7 +7,7 @@ namespace XMPP.Core.StreamErrors;
 /// https://datatracker.ietf.org/doc/html/rfc6120#section-4.9.3.18
 /// </summary>
 [XmlRoot("restricted-xml", Namespace = "urn:ietf:params:xml:ns:xmpp-streams")]
-public record RestrictedXml : IClientError
+public record RestrictedXml : IClientError, IDefaultStanzaKey<RestrictedXml>
 {
   public string What()
   {

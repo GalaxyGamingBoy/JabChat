@@ -7,7 +7,7 @@ namespace XMPP.Core.SaslErrors;
 /// https://datatracker.ietf.org/doc/html/rfc6120#section-6.5.1
 /// </summary>
 [XmlRoot("aborted", Namespace = "urn:ietf:params:xml:ns:xmpp-sasl")]
-public record Aborted : IClientError
+public record Aborted : IClientError, IDefaultStanzaKey<Aborted>
 {
   public string What()
   {

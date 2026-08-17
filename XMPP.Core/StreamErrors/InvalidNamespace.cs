@@ -7,7 +7,7 @@ namespace XMPP.Core.StreamErrors;
 /// https://datatracker.ietf.org/doc/html/rfc6120#section-4.9.3.10
 /// </summary>
 [XmlRoot("invalid-namespace", Namespace = "urn:ietf:params:xml:ns:xmpp-streams")]
-public record InvalidNamespace : IClientError
+public record InvalidNamespace : IClientError, IDefaultStanzaKey<InvalidNamespace>
 {
   public string What()
   {

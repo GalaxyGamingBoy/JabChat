@@ -7,7 +7,7 @@ namespace XMPP.Core.StanzaErrors;
 /// https://datatracker.ietf.org/doc/html/rfc6120#section-8.3.3.2
 /// </summary>
 [XmlRoot("conflict", Namespace = "urn:ietf:params:xml:ns:xmpp-stanzas")]
-public record Conflict : IClientError
+public record Conflict : IClientError, IDefaultStanzaKey<Conflict>
 {
   public string What()
   {

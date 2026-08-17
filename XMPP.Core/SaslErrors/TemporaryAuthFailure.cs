@@ -7,7 +7,7 @@ namespace XMPP.Core.SaslErrors;
 /// https://datatracker.ietf.org/doc/html/rfc6120#section-6.5.11
 /// </summary>
 [XmlRoot(" temporary-auth-failure", Namespace = "urn:ietf:params:xml:ns:xmpp-sasl")]
-public record TemporaryAuthFailure : IClientError
+public record TemporaryAuthFailure : IClientError, IDefaultStanzaKey<TemporaryAuthFailure>
 {
   public string What()
   {

@@ -7,7 +7,7 @@ namespace XMPP.Core.StanzaErrors;
 /// https://datatracker.ietf.org/doc/html/rfc6120#section-8.3.3.13
 /// </summary>
 [XmlRoot("recipient-unavailable", Namespace = "urn:ietf:params:xml:ns:xmpp-stanzas")]
-public record RecipientUnavailable : IClientError
+public record RecipientUnavailable : IClientError, IDefaultStanzaKey<RecipientUnavailable>
 {
   public string What()
   {

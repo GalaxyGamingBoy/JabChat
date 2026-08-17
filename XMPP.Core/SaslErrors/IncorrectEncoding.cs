@@ -7,7 +7,7 @@ namespace XMPP.Core.SaslErrors;
 /// https://datatracker.ietf.org/doc/html/rfc6120#section-6.5.5
 /// </summary>
 [XmlRoot("incorrect-encoding", Namespace = "urn:ietf:params:xml:ns:xmpp-sasl")]
-public record IncorrectEncoding : IClientError
+public record IncorrectEncoding : IClientError, IDefaultStanzaKey<IncorrectEncoding>
 {
   public string What()
   {

@@ -8,25 +8,17 @@ namespace XMPP.Core;
 
 using RegisterFeatureResult = OneOf<
   Unit,
-  RegisterFeatureResults.AmbiguousAttributeMatch,
-  RegisterFeatureResults.FeatureNamespaceAlreadyRegistered,
-  RegisterFeatureResults.FeatureNamespaceMissing
+  RegisterFeatureResults.FeatureAlreadyRegistered
 >;
 
 using RegisterClientErrorResult = OneOf<
   Unit,
-  RegisterClientErrorResults.AmbiguousAttributeMatch,
-  RegisterClientErrorResults.XmlErrorNameMissing,
-  RegisterClientErrorResults.XmlErrorNamespaceMissing,
-  RegisterClientErrorResults.ErrorAlreadyRegistered
+  RegisterClientErrorResults.AlreadyRegistered
 >;
 
 using RegisterInfoQueryResult = OneOf<
   Unit,
-  RegisterInfoQueryResults.AmbiguousAttributeMatch,
-  RegisterInfoQueryResults.XmlErrorNameMissing,
-  RegisterInfoQueryResults.XmlErrorNamespaceMissing,
-  RegisterInfoQueryResults.ErrorAlreadyRegistered
+  RegisterInfoQueryResults.AlreadyRegistered
 >;
 
 /// <summary>
@@ -116,85 +108,40 @@ public static class XmppClientRegistry
   /// Registers a stream feature with the registry
   /// </summary>
   /// <typeparam name="T">Feature to register</typeparam>
-  public static RegisterFeatureResult RegisterFeature<T>()
+  public static RegisterFeatureResult RegisterFeature<T>() where T : IXmppStanzaKey<T>
   {
-    try
-    {
-      var attr = (XmlRootAttribute?)Attribute.GetCustomAttribute(
-        typeof(T), typeof(XmlRootAttribute));
-
-      if (attr?.Namespace == null)
-        return new RegisterFeatureResults.FeatureNamespaceMissing();
-
-      if (FeatureSerializers.ContainsKey(attr.Namespace))
-        return new RegisterFeatureResults.FeatureNamespaceAlreadyRegistered(attr.Namespace);
-
-      FeatureSerializers.Add(attr.Namespace, new XmlSerializer(typeof(T)));
-      return new Unit();
-    }
-    catch (AmbiguousMatchException)
-    {
-      return new RegisterFeatureResults.AmbiguousAttributeMatch();
-    }
+    var key = T.ToStanzaKey();
+    if (FeatureSerializers.ContainsKey(key))
+      return new RegisterFeatureResults.FeatureAlreadyRegistered(key);
+    FeatureSerializers.Add(key, new XmlSerializer(typeof(T)));
+    return new Unit();
   }
 
   /// <summary>
   /// Registers a client error with the registry
   /// </summary>
   /// <typeparam name="T">Client error to register</typeparam>
-  public static RegisterClientErrorResult RegisterClientError<T>() where T : IClientError
+  public static RegisterClientErrorResult RegisterClientError<T>() where T : IClientError, IXmppStanzaKey<T>
   {
-    try
-    {
-      var attr = (XmlRootAttribute?)Attribute.GetCustomAttribute(
-        typeof(T), typeof(XmlRootAttribute));
+    var key = T.ToStanzaKey();
+    if (ErrorSerializers.ContainsKey(key))
+      return new RegisterClientErrorResults.AlreadyRegistered(key);
 
-      if (attr?.ElementName == null)
-        return new RegisterClientErrorResults.XmlErrorNameMissing();
-      if (attr.Namespace == null)
-        return new RegisterClientErrorResults.XmlErrorNamespaceMissing();
-
-      var key = $"{attr.Namespace}/{attr.ElementName}";
-
-      if (ErrorSerializers.ContainsKey(key))
-        return new RegisterClientErrorResults.ErrorAlreadyRegistered(key);
-
-      ErrorSerializers.Add(key, new XmlSerializer(typeof(T)));
-      return new Unit();
-    }
-    catch (AmbiguousMatchException)
-    {
-      return new RegisterClientErrorResults.AmbiguousAttributeMatch();
-    }
+    ErrorSerializers.Add(key, new XmlSerializer(typeof(T)));
+    return new Unit();
   }
   
   /// <summary>
   /// Registers a client error with the registry
   /// </summary>
   /// <typeparam name="T">Client error to register</typeparam>
-  public static RegisterInfoQueryResult RegisterInfoQuery<T>()
+  public static RegisterInfoQueryResult RegisterInfoQuery<T>() where T : IXmppStanzaKey<T>
   {
-    try
-    {
-      var attr = (XmlRootAttribute?)Attribute.GetCustomAttribute(
-        typeof(T), typeof(XmlRootAttribute));
+    var key = T.ToStanzaKey(); 
+    if (InfoQuerySerializers.ContainsKey(key))
+      return new RegisterInfoQueryResults.AlreadyRegistered(key);
 
-      if (attr?.ElementName == null)
-        return new RegisterInfoQueryResults.XmlErrorNameMissing();
-      if (attr.Namespace == null)
-        return new RegisterInfoQueryResults.XmlErrorNamespaceMissing();
-
-      var key = $"{attr.Namespace}/{attr.ElementName}";
-
-      if (InfoQuerySerializers.ContainsKey(key))
-        return new RegisterInfoQueryResults.ErrorAlreadyRegistered(key);
-
-      InfoQuerySerializers.Add(key, new XmlSerializer(typeof(T)));
-      return new Unit();
-    }
-    catch (AmbiguousMatchException)
-    {
-      return new RegisterInfoQueryResults.AmbiguousAttributeMatch();
-    }
+    InfoQuerySerializers.Add(key, new XmlSerializer(typeof(T)));
+    return new Unit();
   }
 }

@@ -443,7 +443,9 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
       if (sub is { NodeType: XmlNodeType.Element, Depth: 1 })
       {
         Console.WriteLine($"F> {sub.Name}: {sub.NamespaceURI}");
-        XmppClientRegistry.FeatureSerializers.TryGetValue(sub.NamespaceURI, out var featureSerializer);
+        
+        var key = $"{sub.NamespaceURI}/{sub.Name}";
+        XmppClientRegistry.FeatureSerializers.TryGetValue(key, out var featureSerializer);
         var feature = featureSerializer?.Deserialize(sub);
         if (feature != null)
           StreamFeatureAdvertised?.Invoke(this, new StreamFeatureRequestedEventArgs { Feature = feature });
@@ -603,10 +605,10 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
             InvokeClientError(await ReadSingleError(reader) ?? new GenericError());
           break;
         case "iq":
-          ReadInfoQuery(reader);
+          await ReadInfoQuery(reader);
           break;
         case "message":
-          ReadMessage(reader);
+          await ReadMessage(reader);
           break;
         case "presence":
           await ReadPresence(reader);

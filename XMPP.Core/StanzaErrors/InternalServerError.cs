@@ -7,7 +7,7 @@ namespace XMPP.Core.StanzaErrors;
 /// https://datatracker.ietf.org/doc/html/rfc6120#section-8.3.3.6
 /// </summary>
 [XmlRoot("internal-server-error", Namespace = "urn:ietf:params:xml:ns:xmpp-stanzas")]
-public record InternalServerError : IClientError
+public record InternalServerError : IClientError, IDefaultStanzaKey<InternalServerError>
 {
   public string What()
   {

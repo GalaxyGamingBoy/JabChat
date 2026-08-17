@@ -7,7 +7,7 @@ namespace XMPP.Core.StanzaErrors;
 /// https://datatracker.ietf.org/doc/html/rfc6120#section-8.3.3.7
 /// </summary>
 [XmlRoot("item-not-found", Namespace = "urn:ietf:params:xml:ns:xmpp-stanzas")]
-public record ItemNotFound : IClientError
+public record ItemNotFound : IClientError, IDefaultStanzaKey<ItemNotFound>
 {
   public string What()
   {

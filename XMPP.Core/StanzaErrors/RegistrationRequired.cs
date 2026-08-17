@@ -7,7 +7,7 @@ namespace XMPP.Core.StanzaErrors;
 /// https://datatracker.ietf.org/doc/html/rfc6120#section-8.3.3.15
 /// </summary>
 [XmlRoot("registration-required", Namespace = "urn:ietf:params:xml:ns:xmpp-stanzas")]
-public record RegistrationRequired : IClientError
+public record RegistrationRequired : IClientError, IDefaultStanzaKey<RegistrationRequired>
 {
   public string What()
   {

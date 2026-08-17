@@ -7,7 +7,7 @@ namespace XMPP.Core.StanzaErrors;
 /// https://datatracker.ietf.org/doc/html/rfc6120#section-8.3.3.11
 /// </summary>
 [XmlRoot("not-authorized", Namespace = "urn:ietf:params:xml:ns:xmpp-stanzas")]
-public record NotAuthorized : IClientError
+public record NotAuthorized : IClientError, IDefaultStanzaKey<NotAuthorized>
 {
   public string What()
   {

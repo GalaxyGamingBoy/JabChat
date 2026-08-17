@@ -7,7 +7,7 @@ namespace XMPP.Core.StreamErrors;
 /// https://datatracker.ietf.org/doc/html/rfc6120#section-4.9.3.11
 /// </summary>
 [XmlRoot("invalid-xml", Namespace = "urn:ietf:params:xml:ns:xmpp-streams")]
-public record InvalidXml : IClientError
+public record InvalidXml : IClientError, IDefaultStanzaKey<InvalidXml>
 {
   public string What()
   {

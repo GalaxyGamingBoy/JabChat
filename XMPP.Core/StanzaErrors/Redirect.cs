@@ -7,7 +7,7 @@ namespace XMPP.Core.StanzaErrors;
 /// https://datatracker.ietf.org/doc/html/rfc6120#section-8.3.3.14
 /// </summary>
 [XmlRoot("redirect", Namespace = "urn:ietf:params:xml:ns:xmpp-stanzas")]
-public record Redirect : IClientError
+public record Redirect : IClientError, IDefaultStanzaKey<Redirect>
 {
   public string What()
   {

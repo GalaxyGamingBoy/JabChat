@@ -7,7 +7,7 @@ namespace XMPP.Core.StreamErrors;
 /// https://datatracker.ietf.org/doc/html/rfc6120#section-4.9.3.6
 /// </summary>
 [XmlRoot("host-unknown", Namespace = "urn:ietf:params:xml:ns:xmpp-streams")]
-public record HostUnknown : IClientError
+public record HostUnknown : IClientError, IDefaultStanzaKey<HostUnknown>
 {
   public string What()
   {

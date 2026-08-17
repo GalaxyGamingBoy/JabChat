@@ -7,7 +7,7 @@ namespace XMPP.Core.StreamErrors;
 /// https://datatracker.ietf.org/doc/html/rfc6120#section-4.9.3.7
 /// </summary>
 [XmlRoot("improper-addressing", Namespace = "urn:ietf:params:xml:ns:xmpp-streams")]
-public record ImproperAddressing : IClientError
+public record ImproperAddressing : IClientError, IDefaultStanzaKey<ImproperAddressing>
 {
   public string What()
   {

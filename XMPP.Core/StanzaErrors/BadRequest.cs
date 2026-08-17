@@ -7,7 +7,7 @@ namespace XMPP.Core.StanzaErrors;
 /// https://datatracker.ietf.org/doc/html/rfc6120#section-8.3.3.1
 /// </summary>
 [XmlRoot("bad-request", Namespace = "urn:ietf:params:xml:ns:xmpp-stanzas")]
-public record BadRequest : IClientError
+public record BadRequest : IClientError, IDefaultStanzaKey<BadRequest>
 {
   public string What()
   {

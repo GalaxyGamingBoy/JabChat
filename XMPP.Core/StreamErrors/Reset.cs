@@ -7,7 +7,7 @@ namespace XMPP.Core.StreamErrors;
 /// https://datatracker.ietf.org/doc/html/rfc6120#section-4.9.3.16
 /// </summary>
 [XmlRoot("reset", Namespace = "urn:ietf:params:xml:ns:xmpp-streams")]
-public record Reset : IClientError
+public record Reset : IClientError, IDefaultStanzaKey<Reset>
 {
   public string What()
   {

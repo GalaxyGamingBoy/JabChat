@@ -7,7 +7,7 @@ namespace XMPP.Core.StreamErrors;
 /// https://datatracker.ietf.org/doc/html/rfc6120#section-4.9.3.23
 /// </summary>
 [XmlRoot("unsupported-feature", Namespace = "urn:ietf:params:xml:ns:xmpp-streams")]
-public record UnsupportedFeature : IClientError
+public record UnsupportedFeature : IClientError, IDefaultStanzaKey<UnsupportedFeature>
 {
   public string What()
   {

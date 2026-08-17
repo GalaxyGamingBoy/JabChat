@@ -2,7 +2,7 @@ using XMPP.Core.Errors;
 
 namespace XMPP.Core.SaslErrors;
 
-public record ChallengeNonceMismatch(string Mechanism) : IClientError
+public record ChallengeNonceMismatch(string Mechanism) : IClientError, IDefaultStanzaKey<ChallengeNonceMismatch>
 {
   public string What()
   {

@@ -1,6 +1,6 @@
 using System.Xml.Serialization;
 
-namespace XMPP.Core;
+namespace XMPP.Core.StanzaErrors;
 
 public enum ErrorType
 {

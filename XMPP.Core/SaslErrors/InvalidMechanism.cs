@@ -7,7 +7,7 @@ namespace XMPP.Core.SaslErrors;
 /// https://datatracker.ietf.org/doc/html/rfc6120#section-6.5.7
 /// </summary>
 [XmlRoot("invalid-mechanism", Namespace = "urn:ietf:params:xml:ns:xmpp-sasl")]
-public record InvalidMechanism : IClientError
+public record InvalidMechanism : IClientError, IDefaultStanzaKey<InvalidMechanism>
 {
   public string What()
   {

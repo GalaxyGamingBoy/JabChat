@@ -7,7 +7,7 @@ namespace XMPP.Core.SaslErrors;
 /// https://datatracker.ietf.org/doc/html/rfc6120#section-6.5.6
 /// </summary>
 [XmlRoot("invalid-authzid", Namespace = "urn:ietf:params:xml:ns:xmpp-sasl")]
-public record InvalidAuthZid : IClientError
+public record InvalidAuthZid : IClientError, IDefaultStanzaKey<InvalidAuthZid>
 {
   public string What()
   {

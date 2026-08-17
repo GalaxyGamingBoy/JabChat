@@ -7,7 +7,7 @@ namespace XMPP.Core.StreamErrors;
 /// https://datatracker.ietf.org/doc/html/rfc6120#section-4.9.3.22
 /// </summary>
 [XmlRoot("unsupported-encoding", Namespace = "urn:ietf:params:xml:ns:xmpp-streams")]
-public record UnsupportedEncoding : IClientError
+public record UnsupportedEncoding : IClientError, IDefaultStanzaKey<UnsupportedEncoding>
 {
   public string What()
   {

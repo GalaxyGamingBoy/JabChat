@@ -7,7 +7,7 @@ namespace XMPP.Core.StreamErrors;
 /// https://datatracker.ietf.org/doc/html/rfc6120#section-4.9.3.5
 /// </summary>
 [XmlRoot("host-gone", Namespace = "urn:ietf:params:xml:ns:xmpp-streams")]
-public record HostGone : IClientError
+public record HostGone : IClientError, IDefaultStanzaKey<HostGone>
 {
   public string What()
   {

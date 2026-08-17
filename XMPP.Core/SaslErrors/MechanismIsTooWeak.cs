@@ -7,7 +7,7 @@ namespace XMPP.Core.SaslErrors;
 /// https://datatracker.ietf.org/doc/html/rfc6120#section-6.5.9
 /// </summary>
 [XmlRoot("mechanism-too-week", Namespace = "urn:ietf:params:xml:ns:xmpp-sasl")]
-public record MechanismTooWeak : IClientError
+public record MechanismTooWeak : IClientError, IDefaultStanzaKey<MechanismTooWeak>
 {
   public string What()
   {
