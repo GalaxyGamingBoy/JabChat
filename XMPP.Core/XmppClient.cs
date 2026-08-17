@@ -403,7 +403,7 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
       {
         Console.WriteLine($"F> {sub.Name}: {sub.NamespaceURI}");
         
-        var key = $"{sub.NamespaceURI}/{sub.Name}";
+        var key = $"{sub.NamespaceURI}/{sub.LocalName}";
         XmppClientRegistry.FeatureSerializers.TryGetValue(key, out var featureSerializer);
         var feature = featureSerializer?.Deserialize(sub);
         if (feature != null)
@@ -495,7 +495,7 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
     await sub.ReadAsync(); // Skip Header
     await sub.ReadAsync(); // Read first error
 
-    XmppClientRegistry.ErrorSerializers.TryGetValue($"{sub.NamespaceURI}/{sub.Name}", out var errorSerializer);
+    XmppClientRegistry.ErrorSerializers.TryGetValue($"{sub.NamespaceURI}/{sub.LocalName}", out var errorSerializer);
     return errorSerializer?.Deserialize(sub) as IClientError;
   }
 
