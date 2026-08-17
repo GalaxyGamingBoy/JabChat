@@ -1,0 +1,25 @@
+ver := env_var_or_default('SQLITE3_VERSION', '3530300')
+
+sqlite3: sqlite3-cleanup
+
+[working-directory: 'wwwroot']
+sqlite3-clean:
+  @rm -rf jswasm
+  @rm -f sqlite3.js sqlite3.wasm sqlite3-worker1.js sqlite3-worker1-promiser.js
+
+sqlite3-download:
+  @echo "Downloading SQLITE3 version {{ver}}..."
+  @wget "https://sqlite.org/2026/sqlite-wasm-{{ver}}.zip" -O sqlite-{{ver}}.zip
+  @unzip sqlite-{{ver}}.zip "sqlite-wasm-{{ver}}/jswasm/*" -d wwwroot
+
+[working-directory: 'wwwroot']
+sqlite3-extract: sqlite3-clean sqlite3-download
+  @mv "sqlite-wasm-{{ver}}/jswasm" .
+  @mv jswasm/sqlite3.wasm .
+  @mv jswasm/sqlite3.js .
+  @mv jswasm/sqlite3-worker1.js .
+  @mv jswasm/sqlite3-worker1-promiser.js .
+
+sqlite3-cleanup: sqlite3-extract
+  @rmdir "wwwroot/sqlite-wasm-{{ver}}"
+  @rm sqlite-{{ver}}.zip

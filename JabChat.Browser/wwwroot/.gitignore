@@ -1,0 +1,5 @@
+jswasm/
+sqlite3.js
+sqlite3.wasm
+ssqlite3-worker1.js
+ssqlite3-worker1-promiser.js
