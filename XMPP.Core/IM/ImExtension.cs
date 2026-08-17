@@ -104,6 +104,8 @@ public class ImExtension : IXmppClientExtension<ImExtension>
 
   public string CachedVersion { get; private set; } = string.Empty;
   
+  public event EventHandler<OnRosterUpdateEventArgs>? OnRosterUpdate;
+  
   private readonly ConcurrentDictionary<string, ImMessageCache> _messageCache = new();
 
   private bool _rosterVersioningEnabled;
@@ -161,6 +163,9 @@ public class ImExtension : IXmppClientExtension<ImExtension>
         lock (_rosterLock)
           _rosterItems = roster.RosterItems;
         CachedVersion = roster.Version ?? string.Empty;
+        
+        foreach(var item in roster.RosterItems)
+          OnRosterUpdate?.Invoke(this, new OnRosterUpdateEventArgs {Item = item});
         
         return new Unit();
       },
@@ -470,12 +475,13 @@ public class ImExtension : IXmppClientExtension<ImExtension>
     if (rosterPushIq.RosterItems.Count != 1)
       return;
     
+    var serverItem = rosterPushIq.RosterItems.Single();
     lock (_rosterLock) {
-      var serverItem = rosterPushIq.RosterItems.Single();
       _rosterItems.RemoveAll(r => r.Jid == serverItem.Jid);
       if (serverItem.Subscription != RosterItemSubscription.Remove)
         _rosterItems.Add(serverItem);
     }
+    OnRosterUpdate?.Invoke(this, new OnRosterUpdateEventArgs() {Item = serverItem});
     
     var iq = new InfoQuery { From = _client.ConnectedJid.ToString(), Id = e.InfoQuery.Id, Type = InfoQueryType.Result};
     _ = Task.Run(async () => await _client.SendInfoQueryAsync(iq));
