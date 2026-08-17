@@ -224,7 +224,7 @@ public class ImExtension : IXmppClientExtension<ImExtension>
   /// <seealso href="https://xmpp.org/rfcs/rfc6121.html#sub-request">
   /// RFC6121 - 3.1. Requesting a Subscription
   /// </seealso>
-  public async Task<RequestPresenceSubscriptionResult> RequestPresenceSubscription(string jid, string? reason)
+  public async Task<RequestPresenceSubscriptionResult> RequestPresenceSubscription(string jid, string? reason = null)
   {
     List<string>? status = reason is null ? null : [reason];
     
