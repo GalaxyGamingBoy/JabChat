@@ -119,12 +119,12 @@ public class ImExtension : IXmppClientExtension<ImExtension>
     XmppClientRegistry.RegisterFeature<ImPresencePreApproval>();
   }
 
-  public ImExtension(IXmppClient client)
+  private ImExtension(IXmppClient client)
   {
     _client = client;
-    _client.OnUnexpectedInfoQueryReceived += OnUnexpectedInfoQueryReceived;
+    _client.OnUnexpectedInfoQueryReceived += ClientOnUnexpectedInfoQueryReceived;
     _client.StreamFeatureAdvertised += ClientOnStreamFeatureAdvertised;
-    _client.OnMessageReceived += OnMessageReceived;
+    _client.OnMessageReceived += ClientOnMessageReceived;
   }
 
   private void ClientOnStreamFeatureAdvertised(object? sender, StreamFeatureRequestedEventArgs e)
@@ -455,7 +455,7 @@ public class ImExtension : IXmppClientExtension<ImExtension>
   /// <seealso href="https://xmpp.org/rfcs/rfc6121.html#roster-syntax-actions-push">
   /// RFC6121 - 2.1.6. Roster Push
   /// </seealso>
-  private void OnUnexpectedInfoQueryReceived(object? sender, OnUnexpectedInfoQueryReceivedEventArgs e)
+  private void ClientOnUnexpectedInfoQueryReceived(object? sender, OnUnexpectedInfoQueryReceivedEventArgs e)
   {
     var rosterPushIq = e.InfoQuery.GetExtensionObject<InfoQueryRoster>();
     if (rosterPushIq is null) return;
@@ -486,7 +486,7 @@ public class ImExtension : IXmppClientExtension<ImExtension>
   /// <seealso href="https://xmpp.org/rfcs/rfc6121.html#message-syntax-thread">
   /// RFC6121 - 5.2.5. Thread Element
   /// </seealso>
-  private void OnMessageReceived(object? sender, OnMessageReceivedEventArgs e)
+  private void ClientOnMessageReceived(object? sender, OnMessageReceivedEventArgs e)
   {
     if (e.Message.Thread is null) return;
     
@@ -497,9 +497,9 @@ public class ImExtension : IXmppClientExtension<ImExtension>
   
   public ValueTask DisposeAsync()
   {
-    _client.OnUnexpectedInfoQueryReceived -= OnUnexpectedInfoQueryReceived;
+    _client.OnUnexpectedInfoQueryReceived -= ClientOnUnexpectedInfoQueryReceived;
     _client.StreamFeatureAdvertised -= ClientOnStreamFeatureAdvertised;
-    _client.OnMessageReceived -= OnMessageReceived;
+    _client.OnMessageReceived -= ClientOnMessageReceived;
     
     return new ValueTask();
   }
