@@ -148,7 +148,7 @@ public class ImExtension : IXmppClientExtension<ImExtension>
   /// </seealso>
   public async Task<GetRosterResult> GetRoster()
   {
-    var iq = new InfoQuery(type: InfoQueryType.Get) { From =  _client.ConnectedJid.ToString() };
+    var iq = new InfoQuery { From =  _client.ConnectedJid.ToString(), Type = InfoQueryType.Get};
     iq.AddExtensionObject(new InfoQueryRoster { Version = _rosterVersioningEnabled ? CachedVersion : null });
     
     var result = await _client.SendInfoQueryAsync(iq);
@@ -180,7 +180,7 @@ public class ImExtension : IXmppClientExtension<ImExtension>
   /// </seealso>
   public async Task<UpsertRosterItemResult> UpsertRosterItem(RosterItem item)
   {
-    var iq = new InfoQuery(type: InfoQueryType.Set) { From = _client.ConnectedJid.ToString() };
+    var iq = new InfoQuery { From = _client.ConnectedJid.ToString(), Type = InfoQueryType.Set};
     iq.AddExtensionObject(new InfoQueryRoster() { RosterItems = [item]});
     
     var result = await _client.SendInfoQueryAsync(iq);
@@ -476,7 +476,7 @@ public class ImExtension : IXmppClientExtension<ImExtension>
         _rosterItems.Add(serverItem);
     }
     
-    var iq = new InfoQuery(type: InfoQueryType.Result) { From = _client.ConnectedJid.ToString(), Id = e.InfoQuery.Id };
+    var iq = new InfoQuery { From = _client.ConnectedJid.ToString(), Id = e.InfoQuery.Id, Type = InfoQueryType.Result};
     _ = Task.Run(async () => await _client.SendInfoQueryAsync(iq));
   }
 
