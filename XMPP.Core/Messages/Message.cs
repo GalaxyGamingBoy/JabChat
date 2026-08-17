@@ -6,6 +6,7 @@ namespace XMPP.Core.Messages;
 [XmlRoot("message", Namespace = "jabber:client")]
 public record Message
 {
+  
   [XmlAttribute("id")]
   public string? Id;
   

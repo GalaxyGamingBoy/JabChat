@@ -67,6 +67,12 @@ using SendPresenceResult = OneOf<
   SendPresenceResults.WriterNullException
 >;
 
+using SendMessageResult = OneOf<
+  Unit,
+  SendMessageResults.SerializationFailure,
+  SendMessageResults.WriterNullException
+>;
+
 using RegisterUnexpectedStanzaResult = OneOf<
   Unit,
   RegisterUnexpectedStanzaResults.AmbiguousAttributeMatch,
@@ -315,6 +321,17 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
       _ => new Unit(),
       _ => new SendPresenceResults.SerializationFailure(),
       _ => new SendPresenceResults.WriterNullException());
+  }
+
+  public async Task<SendMessageResult> SendMessageAsync(Message message)
+  {
+    var id = Guid.CreateVersion7().ToString();
+    message.Id ??= id;
+    
+    return (await SendStanzaAsync(message)).Match<SendMessageResult>(
+      _ => new Unit(),
+      _ => new SendMessageResults.SerializationFailure(),
+      _ => new SendMessageResults.WriterNullException());
   }
 
   #endregion

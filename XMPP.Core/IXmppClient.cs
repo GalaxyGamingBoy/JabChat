@@ -107,6 +107,12 @@ public interface IXmppClient
     SendPresenceResults.WriterNullException
   >> SendPresenceAsync(Presence.Presence presence);
   
+  public Task<OneOf<
+    Unit,
+    SendMessageResults.SerializationFailure,
+    SendMessageResults.WriterNullException
+  >> SendMessageAsync(Messages.Message message);
+  
   /// <summary>
   /// Manages the ReadLock of the backend service, usually there is no need to touch (exceptions exist)
   ///
