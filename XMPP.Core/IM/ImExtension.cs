@@ -77,18 +77,11 @@ using SendMessageResult = OneOf<
   SendMessageResults.WriterNullException
 >;
 
-public class ImExtension : IXmppClientExtension<ImExtension>
+public class ImExtension : XmppClientExtension, IXmppClientExtension<ImExtension>
 {
   public static int ExtensionIdentifier => 0;
 
-  public static XmppClientExtensionActivateOn ActivateOn => XmppClientExtensionActivateOn.SaslComplete;
-
   public static ImExtension Create(IXmppClient client) => new(client);
-  
-  public Task ActivateAsync()
-  {
-    return Task.CompletedTask;
-  }
 
   private readonly Lock _rosterLock = new();
   private List<RosterItem> _rosterItems = [];
@@ -103,6 +96,8 @@ public class ImExtension : IXmppClientExtension<ImExtension>
   }
 
   public string CachedVersion { get; private set; } = string.Empty;
+  
+  public string? DisconnectReason { get; set; }
   
   public event EventHandler<OnRosterUpdateEventArgs>? OnRosterUpdate;
   
@@ -129,12 +124,19 @@ public class ImExtension : IXmppClientExtension<ImExtension>
     _client.OnMessageReceived += ClientOnMessageReceived;
   }
 
-  private void ClientOnStreamFeatureAdvertised(object? sender, StreamFeatureRequestedEventArgs e)
+  public override async Task OnConnected()
   {
-    if (e.Feature is ImRosterVersioningFeature)
-      _rosterVersioningEnabled = true;
-    if (e.Feature is ImPresencePreApproval)
-      _presencePreApprovalEnabled = true;
+    await base.OnConnected();
+    
+    await GetRoster();
+    await SendInitialPresence();
+  }
+
+  public override async Task OnDisconnected()
+  {
+    await base.OnDisconnected();
+
+    await SendOfflinePresence(DisconnectReason);
   }
 
   /// <summary>
@@ -485,6 +487,14 @@ public class ImExtension : IXmppClientExtension<ImExtension>
     
     var iq = new InfoQuery { From = _client.ConnectedJid.ToString(), Id = e.InfoQuery.Id, Type = InfoQueryType.Result};
     _ = Task.Run(async () => await _client.SendInfoQueryAsync(iq));
+  }
+  
+  private void ClientOnStreamFeatureAdvertised(object? sender, StreamFeatureRequestedEventArgs e)
+  {
+    if (e.Feature is ImRosterVersioningFeature)
+      _rosterVersioningEnabled = true;
+    if (e.Feature is ImPresencePreApproval)
+      _presencePreApprovalEnabled = true;
   }
 
   /// <summary>

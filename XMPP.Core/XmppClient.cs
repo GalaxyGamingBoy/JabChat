@@ -100,7 +100,6 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
   private readonly IXmppClientBackend _backend = null!;
   
   private readonly BitArray _enabledExtensions = new(maxExtensionLength);
-  private readonly Dictionary<XmppClientExtensionActivateOn, List<IXmppClientExtension>> _extensionsActivateOn = new();
   private readonly Dictionary<int, IXmppClientExtension> _extensions = new();
   
   #endregion
@@ -189,7 +188,7 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
     
     StartBackgroundService();
     
-    await ActivateExtensions(XmppClientExtensionActivateOn.Connected);
+    await Task.WhenAll(_extensions.Values.Select(async t => await t.OnSocketConnected()));
 
     return new Unit();
   }
@@ -198,6 +197,8 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
   {
     if (State == XmppState.Disconnected)
       return new DisconnectResults.AlreadyDisconnected();
+    
+    await Task.WhenAll(_extensions.Values.Select(async t => await t.OnDisconnected()));
 
     await StopBackgroundService();
 
@@ -605,12 +606,10 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
     
     _enabledExtensions[T.ExtensionIdentifier] = true;
 
-    if (!_extensionsActivateOn.ContainsKey(T.ActivateOn))
-      _extensionsActivateOn[T.ActivateOn] = [];
-    _extensionsActivateOn[T.ActivateOn].Add(extension);
-
-    if (T.ActivateOn == XmppClientExtensionActivateOn.Instant)
-      _ = Task.Run(async () => await extension.ActivateAsync());
+    _ = Task.Run(async () =>
+    {
+      await Task.WhenAll(_extensions.Values.Select(async t => await t.OnEnable()));
+    });
   }
 
   public async Task DisableExtension<T>() where T : class, IXmppClientExtension<T>
@@ -618,7 +617,6 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
     var ext = GetExtension<T>();
     if (ext != null) {
       await ext.DisposeAsync();
-      _extensionsActivateOn[T.ActivateOn].Remove(ext);
     }
     
     _extensions.Remove(T.ExtensionIdentifier);
@@ -632,18 +630,6 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
 
     return _extensions[T.ExtensionIdentifier] as T;
   }
-
-  private async Task ActivateExtensions(XmppClientExtensionActivateOn activateOn)
-  {
-    _extensionsActivateOn.TryGetValue(activateOn, out var extensions);
-    
-    if (extensions is null)
-      return;
-    
-    foreach (var extension in extensions)
-      await extension.ActivateAsync();
-  }
-
   #endregion
   
   #region Error Handling
@@ -698,7 +684,7 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
   public async Task SaslCompleted()
   {
     // The SaslCompleted Handler, opens the new XmppStream that advertises Resource Binding
-    await ActivateExtensions(XmppClientExtensionActivateOn.SaslComplete);
+    await Task.WhenAll(_extensions.Values.Select(async t => await t.AfterSasl()));
     await OpenXmppStream();
   }
   
@@ -709,7 +695,7 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
       if (args.Feature is not SaslFeature sasl)
         return;
 
-      await ActivateExtensions(XmppClientExtensionActivateOn.SaslBegin);
+      await Task.WhenAll(_extensions.Values.Select(async t => await t.BeforeSasl()));
 
       Console.WriteLine("Supported SASL mechanisms:");
       sasl.Mechanisms.ForEach(Console.WriteLine);
@@ -734,7 +720,7 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
       if (args.Feature is not BindFeature)
         return;
       
-      await ActivateExtensions(XmppClientExtensionActivateOn.BindBegin);
+      await Task.WhenAll(_extensions.Values.Select(async t => await t.BeforeBind()));
 
       var resource = Credentials.Jid.Resource ?? Guid.NewGuid().ToString();
       Console.WriteLine($"Binding to resource {Credentials.Jid.Resource}");
@@ -749,6 +735,7 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
       };
 
       var result = await SendInfoQueryAsync(query);
+      await Task.WhenAll(_extensions.Values.Select(async t => await t.AfterBind()));
       if (result.IsT1)
       {
         var errors = result.AsT1.StanzaError.Errors.Select(e => e.What());
@@ -763,13 +750,11 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
       }
       
       var iq = result.AsT0;
-      
       _fullJid = Credentials.Jid with { Resource = iq.ResourceBind!.Resource };
       Console.WriteLine($"XMPP Client Connected to JID {_fullJid}");
 
       State = XmppState.Connected;
-
-      await ActivateExtensions(XmppClientExtensionActivateOn.BindComplete);
+      await Task.WhenAll(_extensions.Values.Select(async t => await t.OnConnected()));
     }
     catch (Exception)
     {
