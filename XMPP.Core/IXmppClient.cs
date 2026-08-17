@@ -98,15 +98,21 @@ public interface IXmppClient
   >> SendInfoQueryAsync(InfoQuery query);
   
   /// <summary>
-  /// Sends a presence to the server
+  /// Sends a presence stanza to the server.
+  /// For basic IM applications, use the IM extension
   /// </summary>
-  /// <param name="presence">Presence element</param>
+  /// <param name="presence">Presence stanza</param>
   public Task<OneOf<
     Unit,
     SendPresenceResults.SerializationFailure,
     SendPresenceResults.WriterNullException
   >> SendPresenceAsync(Presence.Presence presence);
   
+  /// <summary>
+  /// Send a message stanza to the server.
+  /// For basic IM applications, use the IM extension
+  /// </summary>
+  /// <param name="message">Message stanza</param>
   public Task<OneOf<
     Unit,
     SendMessageResults.SerializationFailure,
