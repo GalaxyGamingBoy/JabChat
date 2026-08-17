@@ -5,7 +5,7 @@ using XMPP.Core.StanzaErrors;
 namespace XMPP.Core.Presence;
 
 [XmlRoot("presence", Namespace = "jabber:client")]
-public record Presence
+public record Presence : XmppStanza
 {
   [XmlAttribute("id")]
   public string? Id { get; set; }
@@ -27,9 +27,6 @@ public record Presence
   
   [XmlElement("priority")]
   public int? Priority { get; set; }
-  
-  [XmlElement("error")]
-  public StanzaError? StanzaError { get; set; }
   
   public bool ShouldSerializeType() => Type != PresenceType.None;
   public bool ShouldSerializeShow() => Show != PresenceShow.None;

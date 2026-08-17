@@ -1,10 +1,9 @@
 using System.Xml.Serialization;
-using XMPP.Core.StanzaErrors;
 
 namespace XMPP.Core.Messages;
 
 [XmlRoot("message", Namespace = "jabber:client")]
-public record Message
+public record Message : XmppStanza
 {
   
   [XmlAttribute("id")]
@@ -25,9 +24,6 @@ public record Message
   [XmlElement("subject")]
   public List<string> Subject = [];
   
-  [XmlElement("error")]
-  public StanzaError? StanzaError;
-
   [XmlElement("thread")]
   public MessageThread? Thread;
 };

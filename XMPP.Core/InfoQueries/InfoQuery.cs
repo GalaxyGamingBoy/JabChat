@@ -4,7 +4,7 @@ using XMPP.Core.StanzaErrors;
 namespace XMPP.Core.InfoQueries;
 
 [XmlRoot("iq", Namespace = "jabber:client")]
-public record InfoQuery : XmppStanzaExtensions
+public record InfoQuery : XmppStanza
 {
   [XmlAttribute("id")]
   public string? Id { get; set; }
@@ -17,9 +17,6 @@ public record InfoQuery : XmppStanzaExtensions
   
   [XmlAttribute("from")]
   public string? From;
-  
-  [XmlElement("error")]
-  public StanzaError? StanzaError { get; init; }
   
   [XmlElement("bind", Namespace = "urn:ietf:params:xml:ns:xmpp-bind")]
   public Bind? ResourceBind { get; init; }
