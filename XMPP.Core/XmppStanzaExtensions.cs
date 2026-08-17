@@ -3,7 +3,7 @@ using System.Xml.Serialization;
 
 namespace XMPP.Core;
 
-public record StanzaExtensions
+public record XmppStanzaExtensions
 {
   [XmlAnyElement]
   public List<XmlElement> ExtensionElements { get; set; } = [];
