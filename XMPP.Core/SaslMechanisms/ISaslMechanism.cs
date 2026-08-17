@@ -1,4 +1,3 @@
-using XMPP.Core.Address;
 using XMPP.Core.Backend;
 
 namespace XMPP.Core.SaslMechanisms;

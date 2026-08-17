@@ -15,5 +15,5 @@ public record UndefinedCondition : IClientError, IDefaultStanzaKey<UndefinedCond
   }
   
   [XmlText]
-  public string Body { get; set; }
+  public required string Body { get; set; }
 }

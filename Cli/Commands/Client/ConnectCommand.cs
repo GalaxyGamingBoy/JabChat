@@ -1,5 +1,4 @@
 using System.CommandLine;
-using System.Reflection.Metadata;
 using Spectre.Console;
 using XMPP.Core;
 using XMPP.Core.Backend;
@@ -56,7 +55,7 @@ public class ConnectCommand : Command
     _replCommands = root;
   }
 
-  private async Task Repl(IXmppClient client)
+  private async Task Repl()
   {
     while (true)
     {
@@ -120,7 +119,7 @@ public class ConnectCommand : Command
       await Task.Delay(100);
     
     CreateReplCommands(client);
-    await Repl(client);
+    await Repl();
   }
 
   public ConnectCommand() : base("connect", "Connects to the XMPP host")

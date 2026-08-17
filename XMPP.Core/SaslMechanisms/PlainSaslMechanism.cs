@@ -1,6 +1,4 @@
-using System.Xml;
 using System.Xml.Linq;
-using XMPP.Core.Address;
 using XMPP.Core.Backend;
 
 namespace XMPP.Core.SaslMechanisms;
@@ -38,7 +36,7 @@ public class PlainSaslMechanism : ISaslMechanism
     element.SetAttributeValue("mechanism", Mechanism);
     
     var bytes = System.Text.Encoding.UTF8.GetBytes(message);
-    element.SetValue(System.Convert.ToBase64String(bytes));
+    element.SetValue(Convert.ToBase64String(bytes));
     
     await _client.SendStanzaAsync(element);
   }

@@ -10,7 +10,7 @@ public class AddressCommand : Command
   
   public AddressCommand() : base("address", "XMPP address utilities")
   {
-    base.Subcommands.Add(_getCommand);
-    base.Subcommands.Add(_srvCommand);
+    Subcommands.Add(_getCommand);
+    Subcommands.Add(_srvCommand);
   }
 }

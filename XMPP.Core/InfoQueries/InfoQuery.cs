@@ -1,5 +1,4 @@
 using System.Xml.Serialization;
-using XMPP.Core.StanzaErrors;
 
 namespace XMPP.Core.InfoQueries;
 

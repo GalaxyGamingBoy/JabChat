@@ -58,6 +58,8 @@ public class XmppTlsAuthentication(string host) : TlsAuthentication
 
   public TlsCredentials GetClientCredentials(CertificateRequest certificateRequest)
   {
+#pragma warning disable CS8603 // Possible null reference return.
     return null;
+#pragma warning restore CS8603 // Possible null reference return.
   }
 }

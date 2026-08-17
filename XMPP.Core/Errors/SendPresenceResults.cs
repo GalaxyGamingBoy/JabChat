@@ -1,5 +1,3 @@
-using XMPP.Core.StanzaErrors;
-
 namespace XMPP.Core.Errors;
 
 public static class SendPresenceResults

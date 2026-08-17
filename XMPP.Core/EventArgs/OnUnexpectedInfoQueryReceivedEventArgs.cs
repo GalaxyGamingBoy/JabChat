@@ -1,5 +1,4 @@
 using XMPP.Core.InfoQueries;
-using XMPP.Core.Messages;
 
 namespace XMPP.Core.EventArgs;
 

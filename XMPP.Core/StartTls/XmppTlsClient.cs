@@ -6,7 +6,7 @@ namespace XMPP.Core.StartTls;
 
 public class XmppTlsClient(string host) : DefaultTlsClient(new BcTlsCrypto(new SecureRandom()))
 {
-  private byte[] _channelBindingData;
+  private byte[] _channelBindingData = [];
   
   public override TlsAuthentication GetAuthentication()
   {

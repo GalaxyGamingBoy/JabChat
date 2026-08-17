@@ -9,6 +9,6 @@ public class ClientCommand : Command
   
   public ClientCommand() : base("client", "Interact with the XMPP client")
   {
-    base.Subcommands.Add(_connectCommand);
+    Subcommands.Add(_connectCommand);
   }
 }

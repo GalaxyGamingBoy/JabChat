@@ -22,8 +22,8 @@ public class TcpXmppBackend(bool forceTls) : IXmppClientBackend
   #region Setup
   public void UseClient(IXmppClient client)
   {
-    client.RegisterUnexpectedStanza<StartTls.Proceed>(OnStartTlsProceed);
-    client.RegisterUnexpectedStanza<StartTls.Failure>(OnStartTlsFailure);
+    client.RegisterUnexpectedStanza<Proceed>(OnStartTlsProceed);
+    client.RegisterUnexpectedStanza<Failure>(OnStartTlsFailure);
   }
   
   // ReSharper disable once AsyncVoidEventHandlerMethod - XmppClient methods protected by result
@@ -33,7 +33,7 @@ public class TcpXmppBackend(bool forceTls) : IXmppClientBackend
     if (eventArgs.Feature is Features.StartTlsFeature || (TlsClient is null && forceTls))
     {
       Console.WriteLine("Attempting to upgrade session to TLS");
-      await client.SendStanzaAsync(new StartTls.Command());
+      await client.SendStanzaAsync(new Command());
     }
   }
   
@@ -115,7 +115,7 @@ public class TcpXmppBackend(bool forceTls) : IXmppClientBackend
     }
     catch (IOException)
     {
-      xmppClient.InvokeClientError(new StartTls.Failure());
+      xmppClient.InvokeClientError(new Failure());
     }
     
     NetworkStreamUpdated?.Invoke(this, new NetworkStreamUpdatedEventArgs() {Stream = protocol.Stream});
@@ -136,7 +136,7 @@ public class TcpXmppBackend(bool forceTls) : IXmppClientBackend
   {
     var client = (IXmppClient) sender;
     Console.WriteLine("Server rejected TLS upgrade");
-    client.InvokeClientError(new StartTls.Failure());
+    client.InvokeClientError(new Failure());
     return Task.CompletedTask;
   }
   #endregion

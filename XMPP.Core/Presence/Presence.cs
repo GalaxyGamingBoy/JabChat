@@ -1,6 +1,5 @@
 using System.Xml.Serialization;
 using XMPP.Core.IM;
-using XMPP.Core.StanzaErrors;
 
 namespace XMPP.Core.Presence;
 

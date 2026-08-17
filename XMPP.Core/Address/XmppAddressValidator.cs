@@ -13,7 +13,7 @@ public class XmppAddressValidator : IXmppAddressValidator
       await client.ConnectAsync(address.Ip, address.Port).WaitAsync(TimeSpan.FromSeconds(timeout));
       return true;
     }
-    catch (Exception _)
+    catch (Exception)
     {
       return false;
     }

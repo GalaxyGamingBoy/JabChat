@@ -14,5 +14,6 @@ public record SeeOtherHost : IClientError, IDefaultStanzaKey<SeeOtherHost>
     return "The server will not provide service to the initiating entity but is redirecting traffic to another host under the administrative control of the same service provider.";
   }
 
-  public string Host { get; set; }
+  [XmlText]
+  public required string Host { get; set; }
 }

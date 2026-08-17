@@ -36,7 +36,7 @@ public class SrvCommand : Command
 
   public SrvCommand() : base("srv", "Gets the XMPP SRV Records of a host")
   {
-    base.Add(_host);
-    base.SetAction(CommandAction);
+    Add(_host);
+    SetAction(CommandAction);
   }
 }

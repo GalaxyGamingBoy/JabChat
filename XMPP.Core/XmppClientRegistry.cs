@@ -1,4 +1,3 @@
-using System.Reflection;
 using System.Xml.Serialization;
 using OneOf;
 using XMPP.Core.Errors;

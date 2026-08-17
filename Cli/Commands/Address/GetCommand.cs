@@ -42,8 +42,8 @@ public class GetCommand : Command
 
   public GetCommand() : base("get", "Gets the preferred XMPP address of a host")
   {
-    base.Add(_host);
-    base.Add(_timeout);
-    base.SetAction(CommandAction);
+    Add(_host);
+    Add(_timeout);
+    SetAction(CommandAction);
   }
 }
