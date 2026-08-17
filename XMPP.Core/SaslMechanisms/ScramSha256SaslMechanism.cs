@@ -2,7 +2,7 @@ using System.Security.Cryptography;
 
 namespace XMPP.Core.SaslMechanisms;
 
-public class ScramSha256SaslMechanism : ScramSaslMechanism
+public sealed class ScramSha256SaslMechanism : ScramSaslMechanism
 {
   public override int Priority => 400;
   protected override string MechanismName => "SHA-256";

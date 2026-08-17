@@ -3,7 +3,7 @@ using XMPP.Core.Backend;
 
 namespace XMPP.Core.SaslMechanisms;
 
-public class PlainSaslMechanism : ISaslMechanism
+public sealed class PlainSaslMechanism : ISaslMechanism
 {
   private IXmppClient _client = null!;
   
