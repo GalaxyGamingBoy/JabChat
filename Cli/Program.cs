@@ -1,5 +1,21 @@
 ﻿using System.CommandLine;
 using Cli.Commands;
+using Microsoft.Extensions.Logging;
+using Serilog;
+using XMPP.Core;
+
+var template =
+  "{Timestamp:yyyy-MM-dd HH:mm:ss} [{Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}";
+
+var logger = new LoggerConfiguration()
+  .MinimumLevel.Debug()
+  .Destructure.ByTransforming<EventId>(e => e.Id)
+  .WriteTo.Console(outputTemplate: template)
+  .WriteTo.File("log.txt", rollingInterval: RollingInterval.Day, outputTemplate: template)
+  .CreateLogger();
+
+var logFactory = LoggerFactory.Create(b => b.AddSerilog(logger, dispose: true));
+JabChatLogging.Factory = logFactory;
 
 var root = new RootCommand("Command Line Utility to interact with XMPP");
 

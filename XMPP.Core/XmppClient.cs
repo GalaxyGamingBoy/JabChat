@@ -4,6 +4,7 @@ using System.Text;
 using System.Xml;
 using System.Xml.Linq;
 using System.Xml.Serialization;
+using Microsoft.Extensions.Logging;
 using OneOf;
 using XMPP.Core.Address;
 using XMPP.Core.Backend;
@@ -12,6 +13,7 @@ using XMPP.Core.EventArgs;
 using XMPP.Core.Features;
 using XMPP.Core.IM;
 using XMPP.Core.InfoQueries;
+using XMPP.Core.Logs;
 using XMPP.Core.Messages;
 using XMPP.Core.SaslMechanisms;
 
@@ -102,6 +104,8 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
   private readonly BitArray _enabledExtensions = new(maxExtensionLength);
   private readonly Dictionary<int, IXmppClientExtension> _extensions = new();
   
+  private ILogger<XmppClient> _logger = JabChatLogging.Factory.CreateLogger<XmppClient>();
+  
   #endregion
 
   #region Public Fields
@@ -118,7 +122,10 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
 
   public XmppClient(IXmppClientBackend backend) : this()
   {
+    XmppClientLogs.ConfiguringClient(_logger);
+    
     // Backend Configuration
+    XmppClientLogs.BindingBackend(_logger);
     _backend = backend;
     _backend.UseClient(this);
     _backend.NetworkStreamUpdated += OnUpdatedNetworkStream;
@@ -146,10 +153,14 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
     
     // Enable Extensions
     EnableExtension<ImExtension>();
+    
+    XmppClientLogs.CompletedClientConfiguration(_logger);
   }
   
   public async ValueTask DisposeAsync()
   {
+    XmppClientLogs.DisposingClient(_logger);
+    
     await DisconnectWithStreamCloseAsync();
 
     await _backgroundServiceTokenSource.CancelAsync();
@@ -169,6 +180,8 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
   {
     if (State != XmppState.Disconnected)
       return new ConnectResults.ClientAlreadyConnected();
+    
+    XmppClientLogs.Connecting(_logger, Address.Host);
     
     var backendConnectResult = await _backend.ConnectAsync(Address);
     if (!backendConnectResult.IsT0)
@@ -198,6 +211,8 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
     if (State == XmppState.Disconnected)
       return new DisconnectResults.AlreadyDisconnected();
     
+    XmppClientLogs.DisposingClient(_logger);
+    
     await Task.WhenAll(_extensions.Values.Select(async t => await t.OnDisconnected()));
 
     await StopBackgroundService();
@@ -223,6 +238,8 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
   {
     if (State != XmppState.Disconnected)
       return new ReconnectResults.ClientAlreadyConnected();
+    
+    XmppClientLogs.Reconnecting(_logger, Address.Host);
 
     await DisconnectWithStreamCloseAsync();
 
@@ -333,9 +350,13 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
   {
     var key = T.ToStanzaKey();
     if (_unexpectedStanzaSerializers.ContainsKey(key))
+    {
+      XmppClientLogs.ConflictingUnexpectedStanza(_logger, key);
       return new RegisterUnexpectedStanzaResults.UnexpectedStanzaAlreadyRegistered(key);
+    }
 
     _unexpectedStanzaSerializers.Add(key, (new XmlSerializer(typeof(T)), func));
+    XmppClientLogs.RegisteredUnexpectedStanza(_logger, key);
     return new Unit();
   }
   
@@ -344,6 +365,7 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
   {
     var key = T.ToStanzaKey();
     _unexpectedStanzaSerializers.Remove(key);
+    XmppClientLogs.UnregisteredUnexpectedStanza(_logger, key);
   }
   
   public void RegisterSaslMechanism<T>() where T : ISaslMechanism, new()
@@ -351,6 +373,7 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
     var mech = new T();
     mech.BindClient(this, _backend);
     _saslHandlers[mech.Priority] = mech;
+    XmppClientLogs.RegisteredSaslMechanism(_logger, mech.Mechanism, mech.Priority);
   }
   
   #endregion
@@ -361,6 +384,8 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
   {
     if (_stream is null)
       return new OpenXmppStreamResults.StreamNullException();
+    
+    XmppClientLogs.OpeningXmppStream(_logger);
 
     var to = Address.Host.TrimEnd(".").ToString();
 
@@ -379,8 +404,8 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
   {
     if (_stream is null)
       return new CloseXmppStreamResults.StreamNullException();
-
-    Console.WriteLine("Closing XMPP stream");
+    
+    XmppClientLogs.ClosingXmppStream(_logger);
 
     await WriteLock.WaitAsync();
     await _stream!.WriteAsync("</stream:stream>"u8.ToArray());
@@ -402,9 +427,9 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
     while (await sub.ReadAsync())
       if (sub is { NodeType: XmlNodeType.Element, Depth: 1 })
       {
-        Console.WriteLine($"F> {sub.Name}: {sub.NamespaceURI}");
-        
         var key = $"{sub.NamespaceURI}/{sub.LocalName}";
+        XmppClientLogs.ReadStreamFeature(_logger, key);
+        
         XmppClientRegistry.FeatureSerializers.TryGetValue(key, out var featureSerializer);
         var feature = featureSerializer?.Deserialize(sub);
         if (feature != null)
@@ -506,12 +531,14 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
 
   public void StartBackgroundService()
   {
+    XmppClientLogs.StartBackgroundService(_logger);
     _backgroundServiceTokenSource = new CancellationTokenSource();
     _backgroundServiceHandler = Task.Run(BackgroundService);
   }
 
   public async Task StopBackgroundService()
   {
+    XmppClientLogs.StopBackgroundService(_logger);
     await _backgroundServiceTokenSource.CancelAsync();
     if (_backgroundServiceHandler != null)
       await _backgroundServiceHandler;
@@ -531,6 +558,7 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
       // await ReadLock approval
       try
       {
+        XmppClientLogs.ReaderWaitingReadLock(_logger);
         await ReadLock.WaitAsync(_backgroundServiceTokenSource.Token);
       }
       catch (OperationCanceledException)
@@ -538,11 +566,13 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
         break;
       }
 
+      XmppClientLogs.ReaderPassBegun(_logger);
       await reader.ReadAsync();
-      Console.WriteLine($"> {reader.Name}: {reader.NamespaceURI}");
+      XmppClientLogs.ReadXmlElement(_logger, reader.NamespaceURI, reader.Name);
 
       if (reader.NodeType != XmlNodeType.Element)
       {
+        XmppClientLogs.NonXmlElementReadSkipping(_logger);
         ReadLock.Release();
         continue;
       }
@@ -550,31 +580,48 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
       switch (reader.Name)
       {
         case "stream:stream":
+          XmppClientLogs.EncounteredStreamHeader(_logger);
           ReadLock.Release();
           break;
         case "stream:features":
+          XmppClientLogs.ReadStreamFeatureBegun(_logger);
           await ReadStreamFeatures(reader);
+          XmppClientLogs.ReadStreamFeatureEnded(_logger);
           break;
         case "stream:error":
+          XmppClientLogs.EncounteredStreamError(_logger);
           InvokeClientError(await ReadSingleError(reader) ?? new GenericError());
           break;
         case "failure":
           if (reader.NamespaceURI == "urn:ietf:params:xml:ns:xmpp-sasl")
+          {
+            XmppClientLogs.EncounteredSaslError(_logger);
             InvokeClientError(await ReadSingleError(reader) ?? new GenericError());
+          }
           break;
         case "iq":
+          XmppClientLogs.ReadInfoQueryBegun(_logger);
           await ReadInfoQuery(reader);
+          XmppClientLogs.ReadInfoQueryEnded(_logger);
           break;
         case "message":
+          XmppClientLogs.ReadMessageBegun(_logger);
           await ReadMessage(reader);
+          XmppClientLogs.ReadMessageEnded(_logger);
           break;
         case "presence":
+          XmppClientLogs.ReadPresenceBegun(_logger);
           await ReadPresence(reader);
+          XmppClientLogs.ReadPresenceEnded(_logger);
           break;
         default:
+          XmppClientLogs.ReadUnexpectedStanzaBegun(_logger);
           ReadUnexpectedStanza(reader);
+          XmppClientLogs.ReadUnexpectedStanzaEnded(_logger);
           break;
       }
+      
+      XmppClientLogs.ReaderPassEnded(_logger);
     }
   }
   
@@ -601,6 +648,7 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
 
   public void EnableExtension<T>() where T : class, IXmppClientExtension<T>
   {
+    XmppClientLogs.EnablingExtension(_logger, typeof(T).FullName, T.ExtensionIdentifier);
     var extension = T.Create(this);
     _extensions[T.ExtensionIdentifier] = extension;
     
@@ -614,6 +662,8 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
 
   public async Task DisableExtension<T>() where T : class, IXmppClientExtension<T>
   {
+    XmppClientLogs.DisablingExtension(_logger, typeof(T).FullName, T.ExtensionIdentifier);
+    
     var ext = GetExtension<T>();
     if (ext != null) {
       await ext.DisposeAsync();
@@ -683,6 +733,7 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
   
   public async Task SaslCompleted()
   {
+    XmppClientLogs.SaslAuthenticationEnded(_logger);
     // The SaslCompleted Handler, opens the new XmppStream that advertises Resource Binding
     await Task.WhenAll(_extensions.Values.Select(async t => await t.AfterSasl()));
     await OpenXmppStream();
@@ -694,17 +745,18 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
     {
       if (args.Feature is not SaslFeature sasl)
         return;
+      
+      XmppClientLogs.SaslAuthenticationBegun(_logger);
 
       await Task.WhenAll(_extensions.Values.Select(async t => await t.BeforeSasl()));
 
-      Console.WriteLine("Supported SASL mechanisms:");
-      sasl.Mechanisms.ForEach(Console.WriteLine);
+      XmppClientLogs.SaslServerSupports(_logger, string.Join(", ", sasl.Mechanisms));
 
       var commonMechanisms = _saslHandlers
         .Where(mech => sasl.Mechanisms.Contains(mech.Value.Mechanism));
       
       var mechanism = commonMechanisms.First(); 
-      Console.WriteLine($"Using P{mechanism.Key}: {mechanism.Value.Mechanism}");
+      XmppClientLogs.UsingSaslMechanism(_logger, mechanism.Value.Mechanism, mechanism.Key);
       await mechanism.Value.Use(Credentials);
     }
     catch (Exception)
@@ -723,7 +775,7 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
       await Task.WhenAll(_extensions.Values.Select(async t => await t.BeforeBind()));
 
       var resource = Credentials.Jid.Resource ?? Guid.NewGuid().ToString();
-      Console.WriteLine($"Binding to resource {Credentials.Jid.Resource}");
+      XmppClientLogs.BindResourceBegun(_logger, resource);
       
       var query = new InfoQuery()
       {
@@ -751,7 +803,8 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
       
       var iq = result.AsT0;
       _fullJid = Credentials.Jid with { Resource = iq.ResourceBind!.Resource };
-      Console.WriteLine($"XMPP Client Connected to JID {_fullJid}");
+      XmppClientLogs.BindResourceEnded(_logger, iq.ResourceBind!.Resource);
+      XmppClientLogs.Connected(_logger, _fullJid);
 
       State = XmppState.Connected;
       await Task.WhenAll(_extensions.Values.Select(async t => await t.OnConnected()));

@@ -10,6 +10,7 @@
     <PackageReference Include="DnsClient" />
     <PackageReference Include="OneOf" />
     <PackageReference Include="BouncyCastle.Cryptography" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
   </ItemGroup>
 
 </Project>

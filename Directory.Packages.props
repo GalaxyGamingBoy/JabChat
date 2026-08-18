@@ -24,6 +24,7 @@
     <PackageVersion Include="DnsClient" Version="1.8.0" />
     <PackageVersion Include="OneOf" Version="3.0.271" />
     <PackageVersion Include="BouncyCastle.Cryptography" Version="2.6.2" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.11" />
   </ItemGroup>
   <ItemGroup>
     <PackageVersion Include="coverlet.collector" Version="6.0.4" />
@@ -34,6 +35,11 @@
   <ItemGroup>
     <PackageVersion Include="Spectre.Console" Version="0.55.0" />
     <PackageVersion Include="System.CommandLine" Version="2.0.5" />
+
+    <PackageVersion Include="Serilog" Version="4.4.0" />
+    <PackageVersion Include="Serilog.Sinks.Console" Version="6.1.1" />
+    <PackageVersion Include="Serilog.Sinks.File" Version="7.0.0" />
+    <PackageVersion Include="Serilog.Extensions.Logging" Version="10.0.0" />
   </ItemGroup>
   <ItemGroup>
     <PackageVersion Include="FluentMigrator" Version="8.0.1" />
