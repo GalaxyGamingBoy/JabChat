@@ -35,7 +35,8 @@ public record XmppStanzaExtensions
     foreach (var extensionObject in ExtensionElements)
     {
       var key = $"{extensionObject.NamespaceURI}/{extensionObject.LocalName}";
-      var serializer = XmppClientRegistry.InfoQuerySerializers[key];
+      XmppClientRegistry.InfoQuerySerializers.TryGetValue(key, out var serializer);
+      if (serializer == null) continue;
       using var reader = new XmlNodeReader(extensionObject);
       ExtensionObjects[key] = (serializer.Deserialize(reader) as IXmppStanzaKey)!;
     }

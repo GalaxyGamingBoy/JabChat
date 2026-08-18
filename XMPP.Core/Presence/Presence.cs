@@ -29,4 +29,9 @@ public record Presence : XmppStanza
   
   public bool ShouldSerializeType() => Type != PresenceType.None;
   public bool ShouldSerializeShow() => Show != PresenceShow.None;
+
+  public override string ToString()
+  {
+    return $"{From}: {Status?.FirstOrDefault()}";
+  }
 }

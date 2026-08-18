@@ -19,11 +19,16 @@ public record Message : XmppStanza
   public MessageType Type;
   
   [XmlElement("body")]
-  public List<string> Body = [];
-  
+  public List<string>? Body;
+
   [XmlElement("subject")]
-  public List<string> Subject = [];
+  public List<string>? Subject;
   
   [XmlElement("thread")]
   public MessageThread? Thread;
+  
+  public override string ToString()
+  {
+    return $"{From}: {Body?.FirstOrDefault()}";
+  }
 };
