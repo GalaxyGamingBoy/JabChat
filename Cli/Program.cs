@@ -10,7 +10,6 @@ var template =
 var logger = new LoggerConfiguration()
   .MinimumLevel.Debug()
   .Destructure.ByTransforming<EventId>(e => e.Id)
-  .WriteTo.Console(outputTemplate: template)
   .WriteTo.File("log.txt", rollingInterval: RollingInterval.Day, outputTemplate: template)
   .CreateLogger();
 

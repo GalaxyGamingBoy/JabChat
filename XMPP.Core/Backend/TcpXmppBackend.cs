@@ -1,10 +1,13 @@
 using System.Net.Sockets;
+using Microsoft.Extensions.Logging;
 using OneOf;
 using Org.BouncyCastle.Tls;
 using XMPP.Core.Address;
 using XMPP.Core.Errors;
 using XMPP.Core.EventArgs;
+using XMPP.Core.LogMessages;
 using XMPP.Core.StartTls;
+using TcpXmppBackendLogs = XMPP.Core.LogMessages.TcpXmppBackendLogs;
 
 namespace XMPP.Core.Backend;
 
@@ -16,12 +19,15 @@ public class TcpXmppBackend(bool forceTls) : IXmppClientBackend
   private NetworkStream? Stream { get; set; }
   
   private string ConnectedHost { get; set; } = string.Empty; 
+  
+  private ILogger<TcpXmppBackend> _logger = JabChatLogging.Factory.CreateLogger<TcpXmppBackend>();
   #endregion
   
   
   #region Setup
   public void UseClient(IXmppClient client)
   {
+    TcpXmppBackendLogs.BindToClient(_logger);
     client.RegisterUnexpectedStanza<Proceed>(OnStartTlsProceed);
     client.RegisterUnexpectedStanza<Failure>(OnStartTlsFailure);
   }
@@ -32,13 +38,15 @@ public class TcpXmppBackend(bool forceTls) : IXmppClientBackend
     var client = (IXmppClient) sender!;
     if (eventArgs.Feature is Features.StartTlsFeature || (TlsClient is null && forceTls))
     {
-      Console.WriteLine("Attempting to upgrade session to TLS");
+      TcpXmppBackendLogs.StartTlsUpgradeRequest(_logger);
+      // Console.WriteLine("Attempting to upgrade session to TLS");
       await client.SendStanzaAsync(new Command());
     }
   }
   
   public void Dispose()
   {
+    TcpXmppBackendLogs.DisposingBackend(_logger);
     NetworkStreamUpdated?.Invoke(this, new NetworkStreamUpdatedEventArgs { Stream = null });
     
     Stream?.Dispose();
@@ -66,6 +74,8 @@ public class TcpXmppBackend(bool forceTls) : IXmppClientBackend
     {
       if (Client is not null || Stream is not null)
         return new BackendConnectResults.ClientAlreadyConnected();
+      
+      TcpXmppBackendLogs.Connect(_logger, address.Ip, address.Port);
 
       Client = new TcpClient();
       ConnectedHost = address.Host.TrimEnd(".").ToString();
@@ -99,12 +109,14 @@ public class TcpXmppBackend(bool forceTls) : IXmppClientBackend
   {
     if (Client is null || Stream is null)
     {
-      Console.WriteLine("Upgrade to SSL failed - no active TCP Stream");
+      TcpXmppBackendLogs.TlsUpgradeFailedNoTcp(_logger);
       return;
     }
-
+    
     NetworkStreamUpdated?.Invoke(this, new NetworkStreamUpdatedEventArgs() {Stream = null});
     await xmppClient.StopBackgroundService();
+    
+    TcpXmppBackendLogs.UpgradingStreamToTls(_logger);
 
     var protocol = new TlsClientProtocol(Stream);
     TlsClient = new XmppTlsClient(ConnectedHost);
@@ -125,17 +137,17 @@ public class TcpXmppBackend(bool forceTls) : IXmppClientBackend
   
   private async Task OnStartTlsProceed(object sender, object? stanza)
   {
-    Console.WriteLine("Server confirmed TLS upgrade, proceeding...");
+    TcpXmppBackendLogs.ServerConfirmedTlsUpgrade(_logger);
     await UpgradeSslStream((IXmppClient) sender);
       
     await ((XmppClient)sender).OpenXmppStream();
-    Console.WriteLine("TLS upgrade complete");
+    TcpXmppBackendLogs.StreamUpgradedToTls(_logger);
   }
   
   private Task OnStartTlsFailure(object sender, object? stanza)
   {
+    TcpXmppBackendLogs.ServerRejectedTlsUpgrade(_logger);
     var client = (IXmppClient) sender;
-    Console.WriteLine("Server rejected TLS upgrade");
     client.InvokeClientError(new Failure());
     return Task.CompletedTask;
   }

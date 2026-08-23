@@ -13,9 +13,10 @@ using XMPP.Core.EventArgs;
 using XMPP.Core.Features;
 using XMPP.Core.IM;
 using XMPP.Core.InfoQueries;
-using XMPP.Core.Logs;
+using XMPP.Core.LogMessages;
 using XMPP.Core.Messages;
 using XMPP.Core.SaslMechanisms;
+using XmppClientLogs = XMPP.Core.LogMessages.XmppClientLogs;
 
 namespace XMPP.Core;
 
@@ -430,9 +431,10 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
   private async Task ReadStreamFeatures(XmlReader reader)
   {
     using var sub = reader.ReadSubtree();
+    await sub.ReadAsync();
     await sub.ReadAsync(); // Skip Header
 
-    while (await sub.ReadAsync())
+    while (sub is not {NodeType: XmlNodeType.EndElement, LocalName: "features"})
       if (sub is { NodeType: XmlNodeType.Element, Depth: 1 })
       {
         var key = $"{sub.NamespaceURI}/{sub.LocalName}";
@@ -442,6 +444,8 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
         var feature = featureSerializer?.Deserialize(sub);
         if (feature != null)
           StreamFeatureAdvertised?.Invoke(this, new StreamFeatureRequestedEventArgs { Feature = feature });
+        else
+          await sub.SkipAsync();
       }
 
     ReadLock.Release();
@@ -526,8 +530,8 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
   private async Task<IClientError?> ReadSingleError(XmlReader reader)
   {
     using var sub = reader.ReadSubtree();
-    await sub.ReadAsync(); // Skip Header
-    await sub.ReadAsync(); // Read first error
+    await sub.ReadAsync(); 
+    await sub.ReadAsync(); // Skip header
 
     XmppClientRegistry.ErrorSerializers.TryGetValue($"{sub.NamespaceURI}/{sub.LocalName}", out var errorSerializer);
     return errorSerializer?.Deserialize(sub) as IClientError;
