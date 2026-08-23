@@ -302,6 +302,8 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
   {
     var id = Guid.CreateVersion7().ToString();
     query.Id ??= id;
+    
+    XmppClientLogs.SendingInfoQuery(_logger, id);
 
     var tcs = new TaskCompletionSource<InfoQuery>(TaskCreationOptions.RunContinuationsAsynchronously);
     _infoQueries[id] = tcs;
@@ -314,6 +316,8 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
         _ => new SendInfoQueryResults.WriterNullException());
       
     var result = await tcs.Task;
+    XmppClientLogs.ReceivedInfoQueryResult(_logger, id);
+    
     if (result.Type == InfoQueryType.Error)
       return new SendInfoQueryResults.InfoQueryError(result.ToString(), result.StanzaError!);
     return result;
@@ -323,6 +327,8 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
   {
     var id =  Guid.CreateVersion7().ToString();
     presence.Id ??= id;
+    
+    XmppClientLogs.SendingPresence(_logger, id);
 
     return (await SendStanzaAsync(presence)).Match<SendPresenceResult>(
       _ => new Unit(),
@@ -334,6 +340,8 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
   {
     var id = Guid.CreateVersion7().ToString();
     message.Id ??= id;
+    
+    XmppClientLogs.SendingMessage(_logger, id);
     
     return (await SendStanzaAsync(message)).Match<SendMessageResult>(
       _ => new Unit(),
@@ -819,6 +827,8 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
   {
     // todo: no need to set stream to null first - check actual functionality
     var stream = args.Stream;
+    
+    XmppClientLogs.NetworkStreamUpdated(_logger);
 
     _writer?.Dispose();
     _stream = stream;
