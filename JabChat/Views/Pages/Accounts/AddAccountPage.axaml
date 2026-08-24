@@ -19,7 +19,7 @@
             
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                 <Button Margin=" 6 4" Command="{Binding CancelCommand}">Cancel</Button>
-                <Button Margin="6 4">Add Account</Button>
+                <Button Margin="6 4" Command="{Binding AddCommand}">Add Account</Button>
             </StackPanel>
         </StackPanel>
         
@@ -27,7 +27,7 @@
             <StackPanel Orientation="Horizontal" Margin="0 4" Name="JidStackPanel">
                 <TextBox PlaceholderText="Username" Height="22" MaxWidth="196" MinWidth="112" HorizontalContentAlignment="Center"
                          CornerRadius="6 0 0 6" BorderThickness="1 1 0 1"
-                         Text="{Binding Username}"></TextBox>
+                         Text="{Binding Username, Delay=400}"></TextBox>
                 
                 <Border BorderThickness="0 1" BorderBrush="Black" Height="32">
                     <TextBlock Margin="6 0" Height="22">@</TextBlock>
@@ -35,18 +35,19 @@
                 
                 <TextBox PlaceholderText="Host" Height="22" MaxWidth="196" MinWidth="112" HorizontalContentAlignment="Center"
                          CornerRadius="0 6 6 0" BorderThickness="0 1 1 1"
-                         Text="{Binding Host}"></TextBox>
+                         Text="{Binding Host, Delay=400}"></TextBox>
             </StackPanel>
         
             <!-- Limit Password Input to the width of the JID input -->
             <TextBox PlaceholderText="Password" BorderThickness="1" CornerRadius="6" PasswordChar="*"
+                     HorizontalContentAlignment="Center"
                      MaxWidth="{Binding #JidStackPanel.Bounds.Width}"
-                     Text="{Binding Password}"></TextBox>
+                     Text="{Binding Password, Delay=400}"></TextBox>
             
             <Expander Header="Advanced Settings" HorizontalAlignment="Stretch" Margin="0 6" MaxWidth="{Binding #JidStackPanel.Bounds.Width}">
                 <StackPanel>
-                    <TextBlock>Server Host</TextBlock>
-                    <TextBox Text="{Binding ServerHost}"></TextBox>
+                    <TextBlock>Server Ip</TextBlock>
+                    <TextBox Text="{Binding ServerIp}"></TextBox>
                     
                     <TextBlock Margin="0 6 0 0">Server Port</TextBlock>
                     <TextBox Text="{Binding ServerPort}"></TextBox>

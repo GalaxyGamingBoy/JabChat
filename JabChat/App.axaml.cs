@@ -11,6 +11,9 @@ using App.ViewModels;
 using App.Views;
 using FluentMigrator.Runner;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Serilog;
+using XMPP.Core;
 
 namespace App;
 
@@ -30,6 +33,16 @@ public partial class App : Application
     ServiceCollection.AddCommonServices();
     
     var services = ServiceCollection.BuildServiceProvider();
+    
+    // Setup logs
+    var logger = new LoggerConfiguration()
+      .MinimumLevel.Debug()
+      .Destructure.ByTransforming<EventId>(e => e.Id)
+      .WriteTo.Console()
+      .CreateLogger();
+    
+    var logFactory = LoggerFactory.Create(b => b.AddSerilog(logger, dispose: true));
+    JabChatLogging.Factory = logFactory;
  
     // Load Settings
     var settingsService = services.GetRequiredService<ISettingsService>();

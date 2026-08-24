@@ -744,7 +744,9 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
   public event EventHandler<OnPresenceReceivedEventArgs>? OnPresenceReceived;
   
   public event EventHandler<OnUnexpectedInfoQueryReceivedEventArgs>? OnUnexpectedInfoQueryReceived;
-  
+
+  public event EventHandler? OnClientConnected;
+
   public async Task SaslCompleted()
   {
     XmppClientLogs.SaslAuthenticationEnded(_logger);
@@ -822,6 +824,8 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
 
       State = XmppState.Connected;
       await Task.WhenAll(_extensions.Values.Select(async t => await t.OnConnected()));
+      
+      OnClientConnected?.Invoke(this, System.EventArgs.Empty);
     }
     catch (Exception)
     {

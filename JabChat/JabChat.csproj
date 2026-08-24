@@ -30,6 +30,10 @@
         <PackageReference Include="FluentMigrator.Runner" />
         <ProjectReference Include="..\JabChat.Migrations\JabChat.Migrations.csproj" />
         <ProjectReference Include="..\XMPP.Core\XMPP.Core.csproj" />
+
+        <PackageReference Include="Serilog" />
+        <PackageReference Include="Serilog.Sinks.Console" />
+        <PackageReference Include="Serilog.Extensions.Logging" />
     </ItemGroup>
 
     <ItemGroup>

@@ -202,6 +202,11 @@ public interface IXmppClient
   /// Raised when an unexpected info query is received
   /// </summary>
   event EventHandler<OnUnexpectedInfoQueryReceivedEventArgs> OnUnexpectedInfoQueryReceived;
+  
+  /// <summary>
+  /// Raised when the client is fully connected and binded
+  /// </summary>
+  event EventHandler OnClientConnected; 
     
   /// <summary>
   /// Raised by the Sasl handler when Sasl negotiations are complete
