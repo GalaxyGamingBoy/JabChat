@@ -42,4 +42,64 @@
     <data name="IntroPage.CallToAction" xml:space="preserve">
         <value>Ready to chat? Connect your account!</value>
     </data>
+    <data name="AddAccountPage.Title" xml:space="preserve">
+        <value>Connect your Account</value>
+    </data>
+    <data name="AddAccountPage.Subtitle" xml:space="preserve">
+        <value>Add your account information below to get started using JabChat</value>
+    </data>
+    <data name="AddAccountPage.Action.Validate" xml:space="preserve">
+        <value>Verifying the validity of the entered information...</value>
+    </data>
+    <data name="AddAccountPage.Action.Cancel" xml:space="preserve">
+        <value>Cancel</value>
+    </data>
+    <data name="AddAccountPage.Action.AddAccount" xml:space="preserve">
+        <value>Add Account</value>
+    </data>
+    <data name="AddAccountPage.Form.Username" xml:space="preserve">
+        <value>Username</value>
+    </data>
+    <data name="AddAccountPage.Form.Password" xml:space="preserve">
+        <value>Password</value>
+    </data>
+    <data name="AddAccountPage.Form.Host" xml:space="preserve">
+        <value>Host</value>
+    </data>
+    <data name="AddAccountPage.Form.AdvancedSettings" xml:space="preserve">
+        <value>Advanced Settings</value>
+    </data>
+    <data name="AddAccountPage.Form.ServerIp" xml:space="preserve">
+        <value>Server Ip</value>
+    </data>
+    <data name="AddAccountPage.Form.ServerIp.Auto" xml:space="preserve">
+        <value>Automatic</value>
+    </data>
+    <data name="AddAccountPage.Form.ServerPort" xml:space="preserve">
+        <value>Server Port</value>
+    </data>
+    <data name="AddAccountPage.Form.ServerPort.Auto" xml:space="preserve">
+        <value>Automatic</value>
+    </data>
+    <data name="AddAccountPage.Form.Resource" xml:space="preserve">
+        <value>Resource</value>
+    </data>
+    <data name="AddAccountPage.Form.ForceSsl" xml:space="preserve">
+        <value>Force SSL</value>
+    </data>
+    <data name="AddAccountPage.ValidationError.Generic" xml:space="preserve">
+        <value>An unexpected error occured, try again later</value>
+    </data>
+    <data name="AddAccountPage.ValidationError.Unauthorized" xml:space="preserve">
+        <value>Authentication failure, are the credentials correct?</value>
+    </data>
+    <data name="AddAccountPage.ValidationError.BindError" xml:space="preserve">
+        <value>Failed to bind, is the resource entered unique?</value>
+    </data>
+    <data name="AddAccountPage.ValidationError.ConnectError" xml:space="preserve">
+        <value>Failed to connect to the target host, are you online?</value>
+    </data>
+    <data name="AddAccountPage.ValidationError.BuildError" xml:space="preserve">
+        <value>Failed to build a configration, did you fill everything?</value>
+    </data>
 </root>

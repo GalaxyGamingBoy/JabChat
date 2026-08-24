@@ -1,11 +1,8 @@
 using App.Messages;
-using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
-using Org.BouncyCastle.Tls;
 using XMPP.Core;
-using XMPP.Core.Address;
 using XMPP.Core.Errors;
 using XMPP.Core.EventArgs;
 using XMPP.Core.SaslErrors;
@@ -77,11 +74,11 @@ public partial class AddAccountViewModel : ViewModelBase
     private static string GetValidationErrorMessage(ClientValidationStatus status) => status switch
     {
         ClientValidationStatus.None => string.Empty,
-        ClientValidationStatus.Generic => "An unexpected error occured while validating the current configuration",
-        ClientValidationStatus.Unauthorized => "Improper credentials entered",
-        ClientValidationStatus.BindError => "Client could not bind with the entered resource",
-        ClientValidationStatus.ConnectError => "Failed to connect to the target host",
-        ClientValidationStatus.BuildError => "Failed to build client, is the host correct?",
+        ClientValidationStatus.Generic => Lang.Resources.AddAccountPage_ValidationError_Generic,
+        ClientValidationStatus.Unauthorized => Lang.Resources.AddAccountPage_ValidationError_Unauthorized,
+        ClientValidationStatus.BindError => Lang.Resources.AddAccountPage_ValidationError_BindError,
+        ClientValidationStatus.ConnectError => Lang.Resources.AddAccountPage_ValidationError_ConnectError,
+        ClientValidationStatus.BuildError => Lang.Resources.AddAccountPage_ValidationError_BuildError,
         _ => throw new ArgumentOutOfRangeException(nameof(status), status, null)
     };
 

@@ -92,5 +92,125 @@ namespace App.Lang {
                 return ResourceManager.GetString("IntroPage.CallToAction", resourceCulture);
             }
         }
+        
+        public static string AddAccountPage_Title {
+            get {
+                return ResourceManager.GetString("AddAccountPage.Title", resourceCulture);
+            }
+        }
+        
+        public static string AddAccountPage_Subtitle {
+            get {
+                return ResourceManager.GetString("AddAccountPage.Subtitle", resourceCulture);
+            }
+        }
+        
+        public static string AddAccountPage_Action_Validate {
+            get {
+                return ResourceManager.GetString("AddAccountPage.Action.Validate", resourceCulture);
+            }
+        }
+        
+        public static string AddAccountPage_Action_Cancel {
+            get {
+                return ResourceManager.GetString("AddAccountPage.Action.Cancel", resourceCulture);
+            }
+        }
+        
+        public static string AddAccountPage_Action_AddAccount {
+            get {
+                return ResourceManager.GetString("AddAccountPage.Action.AddAccount", resourceCulture);
+            }
+        }
+        
+        public static string AddAccountPage_Form_Username {
+            get {
+                return ResourceManager.GetString("AddAccountPage.Form.Username", resourceCulture);
+            }
+        }
+        
+        public static string AddAccountPage_Form_Password {
+            get {
+                return ResourceManager.GetString("AddAccountPage.Form.Password", resourceCulture);
+            }
+        }
+        
+        public static string AddAccountPage_Form_Host {
+            get {
+                return ResourceManager.GetString("AddAccountPage.Form.Host", resourceCulture);
+            }
+        }
+        
+        public static string AddAccountPage_Form_AdvancedSettings {
+            get {
+                return ResourceManager.GetString("AddAccountPage.Form.AdvancedSettings", resourceCulture);
+            }
+        }
+        
+        public static string AddAccountPage_Form_ServerIp {
+            get {
+                return ResourceManager.GetString("AddAccountPage.Form.ServerIp", resourceCulture);
+            }
+        }
+        
+        public static string AddAccountPage_Form_ServerIp_Auto {
+            get {
+                return ResourceManager.GetString("AddAccountPage.Form.ServerIp.Auto", resourceCulture);
+            }
+        }
+        
+        public static string AddAccountPage_Form_ServerPort {
+            get {
+                return ResourceManager.GetString("AddAccountPage.Form.ServerPort", resourceCulture);
+            }
+        }
+        
+        public static string AddAccountPage_Form_ServerPort_Auto {
+            get {
+                return ResourceManager.GetString("AddAccountPage.Form.ServerPort.Auto", resourceCulture);
+            }
+        }
+        
+        public static string AddAccountPage_Form_Resource {
+            get {
+                return ResourceManager.GetString("AddAccountPage.Form.Resource", resourceCulture);
+            }
+        }
+        
+        public static string AddAccountPage_Form_ForceSsl {
+            get {
+                return ResourceManager.GetString("AddAccountPage.Form.ForceSsl", resourceCulture);
+            }
+        }
+        
+        public static string AddAccountPage_ValidationError_Generic {
+            get {
+                return ResourceManager.GetString("AddAccountPage.ValidationError.Generic", resourceCulture);
+            }
+        }
+        
+        public static string AddAccountPage_ValidationError_Unauthorized {
+            get {
+                return ResourceManager.GetString("AddAccountPage.ValidationError.Unauthorized", resourceCulture);
+            }
+        }
+        
+        public static string AddAccountPage_ValidationError_BindError {
+            get {
+                return ResourceManager.GetString("AddAccountPage.ValidationError.BindError", resourceCulture);
+            }
+        }
+        
+        public static string AddAccountPage_ValidationError_ConnectError {
+            get {
+                return ResourceManager.GetString("AddAccountPage.ValidationError.ConnectError", resourceCulture);
+            }
+        }
+        
+        public static string AddAccountPage_ValidationError_BuildError {
+            get {
+                return ResourceManager.GetString("AddAccountPage.ValidationError.BuildError", resourceCulture);
+            }
+        }
     }
 }
