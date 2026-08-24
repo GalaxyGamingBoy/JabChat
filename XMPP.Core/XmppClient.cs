@@ -162,6 +162,8 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
   {
     XmppClientLogs.DisposingClient(_logger);
     
+    await Task.WhenAll(_extensions.Values.Select(async t => await t.DisposeAsync()));
+    
     await DisconnectWithStreamCloseAsync();
 
     await _backgroundServiceTokenSource.CancelAsync();
@@ -212,7 +214,7 @@ public class XmppClient(int maxExtensionLength = 32) : IXmppClient, IAsyncDispos
     if (State == XmppState.Disconnected)
       return new DisconnectResults.AlreadyDisconnected();
     
-    XmppClientLogs.DisposingClient(_logger);
+    XmppClientLogs.Disconnecting(_logger, Address.Host);
     
     await Task.WhenAll(_extensions.Values.Select(async t => await t.OnDisconnected()));
 

@@ -1,4 +1,5 @@
 using System.CommandLine;
+using Cli.Commands.Repl;
 using Spectre.Console;
 using XMPP.Core;
 using XMPP.Core.Backend;
@@ -46,12 +47,7 @@ public class ConnectCommand : Command
   private void CreateReplCommands(IXmppClient client)
   {
     var root = new RootCommand("JabChat CLI REPL");
-    
-    root.Subcommands.Add(new Repl.StateCommand(client));
-    root.Subcommands.Add(new Repl.ReadLockCommand(client));
-    root.Subcommands.Add(new Repl.RosterCommand(client));
-    root.Subcommands.Add(new Repl.PresenceCommand(client));
-    
+    root.AddReplCommands(client);
     _replCommands = root;
   }
 

@@ -10,5 +10,7 @@ public class PresenceCommand : Command
   {
     Subcommands.Add(new InitialCommand(client));
     Subcommands.Add(new RequestCommand(client));
+    Subcommands.Add(new UpdateCommand(client));
+    Subcommands.Add(new OfflineCommand(client));
   }
 }

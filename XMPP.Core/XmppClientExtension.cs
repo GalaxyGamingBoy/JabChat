@@ -41,4 +41,9 @@ public abstract class XmppClientExtension : IXmppClientExtension
   {
     return Task.CompletedTask;
   }
+
+  public virtual ValueTask DisposeAsync()
+  {
+    return new ValueTask();
+  }
 }

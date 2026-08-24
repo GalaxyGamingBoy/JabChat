@@ -82,6 +82,9 @@ public class ImExtension : XmppClientExtension, IXmppClientExtension<ImExtension
   public static int ExtensionIdentifier => 0;
 
   public static ImExtension Create(IXmppClient client) => new(client);
+  
+  public bool RosterVersioningEnabled;
+  public bool PresencePreApprovalEnabled;
 
   private readonly Lock _rosterLock = new();
   private List<RosterItem> _rosterItems = [];
@@ -102,9 +105,6 @@ public class ImExtension : XmppClientExtension, IXmppClientExtension<ImExtension
   public event EventHandler<OnRosterUpdateEventArgs>? OnRosterUpdate;
   
   private readonly ConcurrentDictionary<string, ImMessageCache> _messageCache = new();
-
-  private bool _rosterVersioningEnabled;
-  private bool _presencePreApprovalEnabled;
   
   private readonly IXmppClient _client;
 
@@ -153,7 +153,7 @@ public class ImExtension : XmppClientExtension, IXmppClientExtension<ImExtension
   public async Task<GetRosterResult> GetRoster()
   {
     var iq = new InfoQuery { From =  _client.ConnectedJid.ToString(), Type = InfoQueryType.Get};
-    iq.AddExtensionObject(new InfoQueryRoster { Version = _rosterVersioningEnabled ? CachedVersion : null });
+    iq.AddExtensionObject(new InfoQueryRoster { Version = RosterVersioningEnabled ? CachedVersion : null });
     
     var result = await _client.SendInfoQueryAsync(iq);
     return result.Match<GetRosterResult>(
@@ -317,7 +317,7 @@ public class ImExtension : XmppClientExtension, IXmppClientExtension<ImExtension
   /// </seealso>
   public async Task<PreApprovePresenceSubscriptionResult> PreApprovePresenceSubscriptionResult(string jid)
   {
-    if (!_presencePreApprovalEnabled)
+    if (!PresencePreApprovalEnabled)
       return new PreApprovePresenceSubscriptionResults.PreApprovalNotSupported();
     
     return (await ApprovePresenceSubscription(jid)).Match<PreApprovePresenceSubscriptionResult>(
@@ -444,6 +444,7 @@ public class ImExtension : XmppClientExtension, IXmppClientExtension<ImExtension
     // href: https://xmpp.org/extensions/xep-0201.html#chat
     var thread = cached?.Thread ?? new MessageThread { Body = Guid.NewGuid().ToString() };
     var to = cached?.FromFullJid ?? message.ToBare;
+    List<string>? subject = message.Subject is null ? null : [message.Subject];
     
     var msg = new Message
     {
@@ -451,7 +452,9 @@ public class ImExtension : XmppClientExtension, IXmppClientExtension<ImExtension
       From = _client.ConnectedJid.ToString(),
       Thread = thread,
       Type = MessageType.Chat,
-      ExtensionElements = message.ExtensionElements
+      ExtensionElements = message.ExtensionElements,
+      Subject = subject,
+      Body = [message.Body]
     };
 
     return await _client.SendMessageAsync(msg);
@@ -471,7 +474,7 @@ public class ImExtension : XmppClientExtension, IXmppClientExtension<ImExtension
     if (e.InfoQuery.From is not null && e.InfoQuery.From != _client.ConnectedJid.BareJid)
       return;
 
-    if (_rosterVersioningEnabled)
+    if (RosterVersioningEnabled)
       CachedVersion = rosterPushIq.Version ?? string.Empty;
     
     if (rosterPushIq.RosterItems.Count != 1)
@@ -492,9 +495,9 @@ public class ImExtension : XmppClientExtension, IXmppClientExtension<ImExtension
   private void ClientOnStreamFeatureAdvertised(object? sender, StreamFeatureRequestedEventArgs e)
   {
     if (e.Feature is ImRosterVersioningFeature)
-      _rosterVersioningEnabled = true;
+      RosterVersioningEnabled = true;
     if (e.Feature is ImPresencePreApproval)
-      _presencePreApprovalEnabled = true;
+      PresencePreApprovalEnabled = true;
   }
 
   /// <summary>
@@ -512,7 +515,7 @@ public class ImExtension : XmppClientExtension, IXmppClientExtension<ImExtension
     _messageCache[key] = new ImMessageCache(bareFrom, e.Message.Thread);
   }
   
-  public ValueTask DisposeAsync()
+  public override ValueTask DisposeAsync()
   {
     _client.OnUnexpectedInfoQueryReceived -= ClientOnUnexpectedInfoQueryReceived;
     _client.StreamFeatureAdvertised -= ClientOnStreamFeatureAdvertised;

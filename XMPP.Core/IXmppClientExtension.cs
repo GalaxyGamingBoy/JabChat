@@ -1,6 +1,6 @@
 namespace XMPP.Core;
 
-public interface IXmppClientExtension
+public interface IXmppClientExtension : IAsyncDisposable
 {
   #region Extension Lifecycle
   
@@ -16,7 +16,7 @@ public interface IXmppClientExtension
   #endregion
 }
 
-public interface IXmppClientExtension<out T> : IAsyncDisposable, IXmppClientExtension where T: class
+public interface IXmppClientExtension<out T> : IXmppClientExtension where T: class
 {
   public static abstract int ExtensionIdentifier { get; }
 
