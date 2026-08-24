@@ -34,30 +34,6 @@ using DeleteRosterItemResult = OneOf<
   SendInfoQueryResults.WriterNullException
 >;
 
-using RequestPresenceSubscriptionResult = OneOf<
-  Unit,
-  SendPresenceResults.SerializationFailure,
-  SendPresenceResults.WriterNullException
->;
-
-using RequestPresenceUnsubscriptionResult = OneOf<
-  Unit,
-  SendPresenceResults.SerializationFailure,
-  SendPresenceResults.WriterNullException
->;
-
-using ApprovePresenceSubscriptionResult = OneOf<
-  Unit,
-  SendPresenceResults.SerializationFailure,
-  SendPresenceResults.WriterNullException
->;
-
-using CancelPresenceSubscriptionResult = OneOf<
-  Unit,
-  SendPresenceResults.SerializationFailure,
-  SendPresenceResults.WriterNullException
->;
-
 using PreApprovePresenceSubscriptionResult = OneOf<
   Unit,
   PreApprovePresenceSubscriptionResults.PreApprovalNotSupported,
@@ -65,7 +41,7 @@ using PreApprovePresenceSubscriptionResult = OneOf<
   SendPresenceResults.WriterNullException
 >; 
 
-using SendInitialPresenceResult = OneOf<
+using SendPresenceResult = OneOf<
   Unit,
   SendPresenceResults.SerializationFailure,
   SendPresenceResults.WriterNullException
@@ -242,12 +218,12 @@ public class ImExtension : XmppClientExtension, IXmppClientExtension<ImExtension
   /// <seealso href="https://xmpp.org/rfcs/rfc6121.html#sub-request">
   /// RFC6121 - 3.1. Requesting a Subscription
   /// </seealso>
-  public async Task<RequestPresenceSubscriptionResult> RequestPresenceSubscription(string jid, string? reason = null)
+  public async Task<SendPresenceResult> RequestPresenceSubscription(string jid, string? reason = null)
   {
     List<string>? status = reason is null ? null : [reason];
     
     var presence = new Presence.Presence() { To = jid, Type = PresenceType.Subscribe, Status = status };
-    return (await _client.SendPresenceAsync(presence)).Match<RequestPresenceSubscriptionResult>(
+    return (await _client.SendPresenceAsync(presence)).Match<SendPresenceResult>(
       unit => unit,
       serializationFailure => serializationFailure,
       writerNullException => writerNullException
@@ -261,10 +237,10 @@ public class ImExtension : XmppClientExtension, IXmppClientExtension<ImExtension
   /// <seealso href="https://xmpp.org/rfcs/rfc6121.html#sub-unsub">
   /// RFC6121 - 3.3. Unsubscribing
   /// </seealso>
-  public async Task<RequestPresenceUnsubscriptionResult> RequestPresenceUnsubscription(string jid)
+  public async Task<SendPresenceResult> RequestPresenceUnsubscription(string jid)
   {
     var presence = new Presence.Presence() { To = jid, Type = PresenceType.Unsubscribe };
-    return (await _client.SendPresenceAsync(presence)).Match<RequestPresenceUnsubscriptionResult>(
+    return (await _client.SendPresenceAsync(presence)).Match<SendPresenceResult>(
       unit => unit,
       serializationFailure => serializationFailure,
       writerNullException => writerNullException
@@ -278,10 +254,10 @@ public class ImExtension : XmppClientExtension, IXmppClientExtension<ImExtension
   /// <seealso href="https://xmpp.org/rfcs/rfc6121.html#sub-request-handle">
   /// RFC6121 - 3.1.4. Client Processing of Inbound Subscription Request
   /// </seealso>
-  public async Task<ApprovePresenceSubscriptionResult> ApprovePresenceSubscription(string jid)
+  public async Task<SendPresenceResult> ApprovePresenceSubscription(string jid)
   {
     var presence = new Presence.Presence() { To = jid, Type = PresenceType.Subscribed };
-    return (await _client.SendPresenceAsync(presence)).Match<ApprovePresenceSubscriptionResult>(
+    return (await _client.SendPresenceAsync(presence)).Match<SendPresenceResult>(
       unit => unit,
       serializationFailure => serializationFailure,
       writerNullException => writerNullException
@@ -298,10 +274,10 @@ public class ImExtension : XmppClientExtension, IXmppClientExtension<ImExtension
   /// <seealso href="https://xmpp.org/rfcs/rfc6121.html#sub-cancel">
   /// RFC6121 - 3.2. Canceling a Subscription
   /// </seealso>
-  public async Task<CancelPresenceSubscriptionResult> CancelPresenceSubscription(string jid)
+  public async Task<SendPresenceResult> CancelPresenceSubscription(string jid)
   {
     var presence = new Presence.Presence() { To = jid, Type = PresenceType.Unsubscribed };
-    return (await _client.SendPresenceAsync(presence)).Match<CancelPresenceSubscriptionResult>(
+    return (await _client.SendPresenceAsync(presence)).Match<SendPresenceResult>(
       unit => unit,
       serializationFailure => serializationFailure,
       writerNullException => writerNullException
@@ -333,7 +309,7 @@ public class ImExtension : XmppClientExtension, IXmppClientExtension<ImExtension
   /// <seealso href="https://xmpp.org/rfcs/rfc6121.html#presence-initial">
   /// RFC6121 - 4.2. Initial Presence
   /// </seealso>
-  public async Task<SendInitialPresenceResult> SendInitialPresence()
+  public async Task<SendPresenceResult> SendInitialPresence()
   {
     var iq = new Presence.Presence() {Type = PresenceType.None};
     return await _client.SendPresenceAsync(iq);
@@ -346,7 +322,7 @@ public class ImExtension : XmppClientExtension, IXmppClientExtension<ImExtension
   /// <seealso href="https://xmpp.org/rfcs/rfc6121.html#presence-broadcast">
   /// RFC6121 - 4.4. Subsequent Presence Broadcast
   /// </seealso>
-  public async Task SendPresenceUpdate(PresenceUpdate update)
+  public async Task<SendPresenceResult> SendPresenceUpdate(PresenceUpdate update)
   {
     List<string>? status = update.Status is null ? null : [update.Status];
     var presence = new Presence.Presence() {
@@ -356,8 +332,9 @@ public class ImExtension : XmppClientExtension, IXmppClientExtension<ImExtension
       Priority =  update.Priority,
     };
     
-    await _client.SendPresenceAsync(presence);
+    return await _client.SendPresenceAsync(presence);
   }
+  
   /// <summary>
   /// Send a presence update directly to an entity
   /// </summary>
@@ -369,7 +346,7 @@ public class ImExtension : XmppClientExtension, IXmppClientExtension<ImExtension
   /// <seealso href="https://xmpp.org/rfcs/rfc6121.html#presence-directed">
   /// RFC6121 - 4.6. Directed Presence
   /// </seealso>
-  public async Task SendDirectedPresenceUpdate(string jid, PresenceUpdate update)
+  public async Task<SendPresenceResult> SendDirectedPresenceUpdate(string jid, PresenceUpdate update)
   {
     List<string>? status = update.Status is null ? null : [update.Status];
     var presence = new Presence.Presence() {
@@ -380,7 +357,7 @@ public class ImExtension : XmppClientExtension, IXmppClientExtension<ImExtension
       To = jid,
     };
     
-    await _client.SendPresenceAsync(presence);
+    return await _client.SendPresenceAsync(presence);
   }
 
   /// <summary>
@@ -390,7 +367,7 @@ public class ImExtension : XmppClientExtension, IXmppClientExtension<ImExtension
   /// <seealso href="https://xmpp.org/rfcs/rfc6121.html#presence-unavailable">
   /// RFC6121 - 4.5. Unavailable Presence
   /// </seealso>
-  public async Task SendOfflinePresence(string? reason)
+  public async Task<SendPresenceResult> SendOfflinePresence(string? reason)
   {
     List<string>? status = reason is null ? null : [reason];
     var presence = new Presence.Presence()
@@ -399,7 +376,7 @@ public class ImExtension : XmppClientExtension, IXmppClientExtension<ImExtension
       Status = status
     };
     
-    await _client.SendPresenceAsync(presence);
+    return await _client.SendPresenceAsync(presence);
   }
   
   /// <summary>
@@ -413,7 +390,7 @@ public class ImExtension : XmppClientExtension, IXmppClientExtension<ImExtension
   /// <seealso href="https://xmpp.org/rfcs/rfc6121.html#presence-directed">
   /// RFC6121 - 4.6. Directed Presence
   /// </seealso>
-  public async Task SendDirectedOfflinePresence(string jid, string? reason)
+  public async Task<SendPresenceResult> SendDirectedOfflinePresence(string jid, string? reason)
   {
     List<string>? status = reason is null ? null : [reason];
     var presence = new Presence.Presence()
@@ -423,7 +400,7 @@ public class ImExtension : XmppClientExtension, IXmppClientExtension<ImExtension
       To = jid,
     };
     
-    await _client.SendPresenceAsync(presence);
+    return await _client.SendPresenceAsync(presence);
   }
 
   /// <summary>

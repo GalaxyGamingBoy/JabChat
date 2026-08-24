@@ -1,9 +1,17 @@
 using System.CommandLine;
+using OneOf;
 using Spectre.Console;
 using XMPP.Core;
+using XMPP.Core.Errors;
 using XMPP.Core.IM;
 
 namespace Cli.Commands.Repl.Presence;
+
+using SendPresenceResult = OneOf<
+  Unit,
+  SendPresenceResults.SerializationFailure,
+  SendPresenceResults.WriterNullException
+>;
 
 public class OfflineCommand : Command
 {
@@ -42,9 +50,14 @@ public class OfflineCommand : Command
       return;
     }
 
+    SendPresenceResult result;
     if (directedTo is null)
-      await im.SendOfflinePresence(reason);
+      result = await im.SendOfflinePresence(reason);
     else
-      await im.SendDirectedOfflinePresence(directedTo, reason);
+      result = await im.SendDirectedOfflinePresence(directedTo, reason);
+    
+    if (result.IsT0) return;
+    var err = (IClientError) result.Value;
+    AnsiConsole.MarkupLine($"[bold red]An error occured while preapproving the presence subscription: {err.What()}[/]");
   }
 }
