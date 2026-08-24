@@ -39,7 +39,6 @@ public class TcpXmppBackend(bool forceTls) : IXmppClientBackend
     if (eventArgs.Feature is Features.StartTlsFeature || (TlsClient is null && forceTls))
     {
       TcpXmppBackendLogs.StartTlsUpgradeRequest(_logger);
-      // Console.WriteLine("Attempting to upgrade session to TLS");
       await client.SendStanzaAsync(new Command());
     }
   }

@@ -1,6 +1,8 @@
 using System.Security.Cryptography;
 using System.Xml.Linq;
+using Microsoft.Extensions.Logging;
 using XMPP.Core.Backend;
+using XMPP.Core.LogMessages;
 using XMPP.Core.SaslErrors;
 
 namespace XMPP.Core.SaslMechanisms;
@@ -15,6 +17,8 @@ public abstract class ScramSaslMechanism : ISaslMechanism
   protected abstract Func<byte[], byte[]> HashFactory { get; }
   
   public string Mechanism => $"SCRAM-{MechanismName}"; 
+  
+  private readonly ILogger<ScramSaslMechanism> _logger = JabChatLogging.Factory.CreateLogger<ScramSaslMechanism>();
   
   private IXmppClient _client = null!;
   private XmppCredentials _credentials = null!;
@@ -65,6 +69,7 @@ public abstract class ScramSaslMechanism : ISaslMechanism
 
   private async Task OnChallengerReceived(object sender, object? challengeMessageReceived)
   {
+    ScramSaslMechanismLogs.ReceivedChallenge(_logger);
     var challengeMessage = (ScramChallenge)challengeMessageReceived!;
     var deserializedBytes = Convert.FromBase64String(challengeMessage.Body);
     var deserialized = System.Text.Encoding.UTF8.GetString(deserializedBytes);
@@ -81,12 +86,14 @@ public abstract class ScramSaslMechanism : ISaslMechanism
 
     if (!challengeNonce.StartsWith(_nonce))
     {
+      ScramSaslMechanismLogs.MismatchedNonce(_logger);
       _client.InvokeClientError(new ChallengeNonceMismatch(Mechanism));
       return;
     }
 
     _clientFinalNoProof = $"c=biws,r={challengeNonce}";
     
+    ScramSaslMechanismLogs.ComputingProof(_logger);
     var salted = ComputeSaltedPassword(challengeSalt, challengeIterations);
     var clientKey = ComputeClientKey(salted);
     var serverKey = ComputeServerKey(salted);
@@ -108,6 +115,7 @@ public abstract class ScramSaslMechanism : ISaslMechanism
     var bytes = System.Text.Encoding.UTF8.GetBytes(message);
     element.SetValue(Convert.ToBase64String(bytes));
 
+    ScramSaslMechanismLogs.SendingProof(_logger);
     await _client.SendStanzaAsync(element);
     _client.ReadLock.Release();
   }
@@ -120,10 +128,12 @@ public abstract class ScramSaslMechanism : ISaslMechanism
 
     if (message != $"v={_serverSignature}")
     {
+      ScramSaslMechanismLogs.MismatchedServerSignature(_logger);
       _client.InvokeClientError(new ServerSignatureMismatch(Mechanism));
       return;
     }
 
+    ScramSaslMechanismLogs.SaslCompleted(_logger);
     await _client.StopBackgroundService();
     await _client.SaslCompleted();
     _client.StartBackgroundService();
@@ -152,6 +162,7 @@ public abstract class ScramSaslMechanism : ISaslMechanism
     var bytes = System.Text.Encoding.UTF8.GetBytes(message);
     element.SetValue(Convert.ToBase64String(bytes));
     
+    ScramSaslMechanismLogs.SendingHeader(_logger);
     await _client.SendStanzaAsync(element);
   } 
 }

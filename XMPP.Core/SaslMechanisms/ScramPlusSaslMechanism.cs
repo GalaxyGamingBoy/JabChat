@@ -1,7 +1,9 @@
 using System.Security.Cryptography;
 using System.Xml.Linq;
+using Microsoft.Extensions.Logging;
 using Org.BouncyCastle.Tls;
 using XMPP.Core.Backend;
+using XMPP.Core.LogMessages;
 using XMPP.Core.SaslErrors;
 
 namespace XMPP.Core.SaslMechanisms;
@@ -16,6 +18,8 @@ public abstract class ScramPlusSaslMechanism : ISaslMechanism
   protected abstract Func<byte[], byte[]> HashFactory { get; }
   
   public string Mechanism => $"SCRAM-{MechanismName}-PLUS"; 
+  
+  private readonly ILogger<ScramPlusSaslMechanism> _logger = JabChatLogging.Factory.CreateLogger<ScramPlusSaslMechanism>();
   
   private IXmppClient _client = null!;
   private IXmppClientBackend _backend = null!;
@@ -68,6 +72,7 @@ public abstract class ScramPlusSaslMechanism : ISaslMechanism
 
   private async Task OnChallengerReceived(object sender, object? challengeMessageReceived)
   {
+    ScramPlusSaslMechanismLogs.ReceivedChallenge(_logger);
     var challengeMessage = (ScramChallenge)challengeMessageReceived!;
     var deserializedBytes = Convert.FromBase64String(challengeMessage.Body);
     var deserialized = System.Text.Encoding.UTF8.GetString(deserializedBytes);
@@ -84,6 +89,7 @@ public abstract class ScramPlusSaslMechanism : ISaslMechanism
 
     if (!challengeNonce.StartsWith(_nonce))
     {
+      ScramPlusSaslMechanismLogs.MismatchedNonce(_logger);
       _client.InvokeClientError(new ChallengeNonceMismatch(Mechanism));
       return;
     }
@@ -93,6 +99,7 @@ public abstract class ScramPlusSaslMechanism : ISaslMechanism
     var channel = Convert.ToBase64String(gs2Header.Concat(binding).ToArray());
     _clientFinalNoProof = $"c={channel},r={challengeNonce}";
     
+    ScramPlusSaslMechanismLogs.ComputingProof(_logger);
     var salted = ComputeSaltedPassword(challengeSalt, challengeIterations);
     var clientKey = ComputeClientKey(salted);
     var serverKey = ComputeServerKey(salted);
@@ -114,6 +121,7 @@ public abstract class ScramPlusSaslMechanism : ISaslMechanism
     var bytes = System.Text.Encoding.UTF8.GetBytes(message);
     element.SetValue(Convert.ToBase64String(bytes));
 
+    ScramPlusSaslMechanismLogs.SendingProof(_logger);
     await _client.SendStanzaAsync(element);
     _client.ReadLock.Release();
   }
@@ -126,10 +134,12 @@ public abstract class ScramPlusSaslMechanism : ISaslMechanism
 
     if (message != $"v={_serverSignature}")
     {
+      ScramPlusSaslMechanismLogs.MismatchedServerSignature(_logger);
       _client.InvokeClientError(new ServerSignatureMismatch(Mechanism));
       return;
     }
 
+    ScramPlusSaslMechanismLogs.SaslCompleted(_logger);
     await _client.StopBackgroundService();
     await _client.SaslCompleted();
     _client.StartBackgroundService();
@@ -147,6 +157,7 @@ public abstract class ScramPlusSaslMechanism : ISaslMechanism
     _client.RegisterUnexpectedStanza<ScramChallenge>(OnChallengerReceived);
     _client.RegisterUnexpectedStanza<SaslSuccess>(OnSuccessReceived);
     
+    ScramPlusSaslMechanismLogs.UseChannelBind(_logger, GetChannelBindingTypeText());
     _clientFirstBare = $"n={credentials.Jid.LocalPart},r={_nonce}";
     var message = $"p={GetChannelBindingTypeText()},,{_clientFirstBare}";
     
@@ -157,8 +168,7 @@ public abstract class ScramPlusSaslMechanism : ISaslMechanism
     var bytes = System.Text.Encoding.UTF8.GetBytes(message);
     element.SetValue(Convert.ToBase64String(bytes));
     
-    Console.WriteLine(GetChannelBindingTypeText());
-    
+    ScramPlusSaslMechanismLogs.SendingHeader(_logger);
     await _client.SendStanzaAsync(element);
   } 
 

@@ -1,11 +1,14 @@
 using System.Xml.Linq;
+using Microsoft.Extensions.Logging;
 using XMPP.Core.Backend;
+using XMPP.Core.LogMessages;
 
 namespace XMPP.Core.SaslMechanisms;
 
 public sealed class PlainSaslMechanism : ISaslMechanism
 {
   private IXmppClient _client = null!;
+  private ILogger<PlainSaslMechanism> _logger = JabChatLogging.Factory.CreateLogger<PlainSaslMechanism>();
   
   public string Mechanism => "PLAIN";
   public int Priority => 600;
@@ -17,6 +20,8 @@ public sealed class PlainSaslMechanism : ISaslMechanism
   
   private async Task OnSuccessReceived(object sender, object? successMessageReceived)
   {
+    PlainSaslMechanismLogs.SaslCompleted(_logger);
+    
     await _client.StopBackgroundService();
     await _client.SaslCompleted();
     _client.StartBackgroundService();
@@ -38,6 +43,7 @@ public sealed class PlainSaslMechanism : ISaslMechanism
     var bytes = System.Text.Encoding.UTF8.GetBytes(message);
     element.SetValue(Convert.ToBase64String(bytes));
     
+    PlainSaslMechanismLogs.SendingPlainAuth(_logger);
     await _client.SendStanzaAsync(element);
   }
 }
