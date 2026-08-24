@@ -3,13 +3,27 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
+using Org.BouncyCastle.Tls;
 using XMPP.Core;
 using XMPP.Core.Address;
+using XMPP.Core.Errors;
+using XMPP.Core.EventArgs;
+using XMPP.Core.SaslErrors;
 
 namespace App.ViewModels.Pages.Accounts;
 
 public partial class AddAccountViewModel : ViewModelBase
 {
+    public enum ClientValidationStatus
+    {
+        None, 
+        Generic,
+        Unauthorized,
+        BindError,
+        ConnectError,
+        BuildError
+    }
+    
     [ObservableProperty]
     public partial string Username { get; set; } = "";
 
@@ -23,7 +37,7 @@ public partial class AddAccountViewModel : ViewModelBase
     public partial string ServerIp { get; set; } = string.Empty;
 
     [ObservableProperty]
-    public partial int ServerPort { get; set; } = 0;
+    public partial string ServerPort { get; set; } = string.Empty;
 
     [ObservableProperty]
     public partial string Resource { get; set; }
@@ -34,16 +48,18 @@ public partial class AddAccountViewModel : ViewModelBase
     
     [ObservableProperty]
     public partial bool IsValidating { get; set; } = false;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasValidationError))]
+    [NotifyPropertyChangedFor(nameof(ValidationMessage))]
+    public partial ClientValidationStatus ValidationStatus { get; set; }
+        = ClientValidationStatus.None;
+
+    public bool HasValidationError => ValidationStatus != ClientValidationStatus.None;
     
-    [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(AddCommand))]
-    public partial int ValidationCount { get; set; }
-
-    [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(AddCommand))]
-    public partial bool LastValidationResult { get; set; } = false;
-
-    public bool CanAdd => ValidationCount == 0 && LastValidationResult;
+    public string ValidationMessage => GetValidationErrorMessage(ValidationStatus);
+        
+    private bool CanAdd() => !IsValidating;
     
     [RelayCommand]
     private void Cancel()
@@ -52,128 +68,88 @@ public partial class AddAccountViewModel : ViewModelBase
     }
 
     [RelayCommand(CanExecute = nameof(CanAdd))]
-    private void Add()
+    private async Task AddAsync()
     {
-        
+        await ValidateAsync();
+        Console.WriteLine(HasValidationError);
     }
 
-    partial void OnUsernameChanged(string value)
+    private static string GetValidationErrorMessage(ClientValidationStatus status) => status switch
     {
-        _ = ValidateAsync();
-    }
+        ClientValidationStatus.None => string.Empty,
+        ClientValidationStatus.Generic => "An unexpected error occured while validating the current configuration",
+        ClientValidationStatus.Unauthorized => "Improper credentials entered",
+        ClientValidationStatus.BindError => "Client could not bind with the entered resource",
+        ClientValidationStatus.ConnectError => "Failed to connect to the target host",
+        ClientValidationStatus.BuildError => "Failed to build client, is the host correct?",
+        _ => throw new ArgumentOutOfRangeException(nameof(status), status, null)
+    };
 
-    partial void OnPasswordChanged(string value)
-    {
-        _ = ValidateAsync();
-    }
-
-    partial void OnHostChanged(string value)
-    {
-        _ = ValidateAsync();
-    }
-
-    partial void OnServerIpChanged(string value)
-    {
-        _ = ValidateAsync(true);
-    }
-
-    partial void OnServerPortChanged(int port)
-    {
-        _ = ValidateAsync(true);
-    }
-
-    partial void OnResourceChanged(string value)
-    {
-        _ = ValidateAsync();
-    }
-
-    partial void OnForceSslChanged(bool value)
-    {
-        _ = ValidateAsync();
-    }
-    
-    private void SetValidationResult(bool result)
-    {
-        if (ValidationCount <= 0) return;
-        
-        ValidationCount--;
-        if (ValidationCount <= 0) IsValidating = false;
-        LastValidationResult = result;
-    }
-
-    // todo: move dispose async to interface
-
-    private async Task OnClientConnected_Base(XmppClient client)
-    {
-        await client.Disconnect();
-        
-        client.OnClientConnected -= OnClientConnected;
-        client.OnClientConnected -= OnClientConnectedNoChangeServer;
-        client.ClientErrorRaised -= OnClientError;
-        await client.DisposeAsync();
-        
-        Dispatcher.UIThread.Invoke(() => SetValidationResult(true));
-    }
-    
-    private async void OnClientConnected(object? sender, EventArgs e)
-    {
-        if (sender is not XmppClient client) return;
-        ServerIp = client.Address.Ip;
-        ServerPort = client.Address.Port;
-        await OnClientConnected_Base(client);
-    }
-    
-    private async void OnClientConnectedNoChangeServer(object? sender, EventArgs e)
-    {
-        if (sender is not XmppClient client) return;
-        await OnClientConnected_Base(client);
-    }
-
-    private void OnClientError(object? sender, EventArgs e)
-    {
-        if (sender is not XmppClient client) return;
-        client.OnClientConnected -= OnClientConnectedNoChangeServer;
-        client.OnClientConnected -= OnClientConnected;
-        client.ClientErrorRaised -= OnClientError;
-        
-        Dispatcher.UIThread.Invoke(() => SetValidationResult(false));
-    }
-
-    private async Task ValidateAsync(bool serverSettingsChanged = false)
+    private async Task ValidateAsync()
     {
         IsValidating = true;
-        ValidationCount++;
 
-        var builder = new XmppClientBuilder()
-            .UseUsername(Username)
-            .UsePassword(Password)
-            .UseResourceForBinding(Resource)
-            .UseHost(Host)
-            .UseTcp();
-
-        if (ForceSsl) builder.ForceTls();
-        var builderResult = await builder.BuildAsync();
-        if (!builderResult.IsT0)
+        try
         {
-            SetValidationResult(false);
-            return;
+            var builder = new XmppClientBuilder()
+                .UseUsername(Username)
+                .UsePassword(Password)
+                .UseResourceForBinding(Resource)
+                .UseHost(Host)
+                .UseTcp();
+
+            if (ForceSsl) builder.ForceTls();
+            var builderResult = await builder.BuildAsync();
+            if (!builderResult.IsT0)
+            {
+                ValidationStatus = ClientValidationStatus.BuildError;
+                return;
+            }
+
+            var client = builderResult.AsT0!;
+            var tsk = new TaskCompletionSource<ClientValidationStatus>(TaskCreationOptions.RunContinuationsAsynchronously);
+            client.OnClientConnected += OnConnected;
+            client.ClientErrorRaised += OnError;
+
+            var connectResult = await client.ConnectAsync();
+            if (!connectResult.IsT0)
+            {
+                ValidationStatus = ClientValidationStatus.ConnectError;
+                return;
+            }
+
+            ValidationStatus = await tsk.Task;
+
+            if (client.State == XmppState.Connected)
+            {
+                ServerIp = client.Address.Ip;
+                ServerPort = client.Address.Port.ToString();
+            }
+
+            client.OnClientConnected -= OnConnected;
+            client.ClientErrorRaised -= OnError;
+            
+            if (client.State == XmppState.Connected)
+                await ((XmppClient)client).DisposeAsync();
+
+            void OnConnected(object? sender, EventArgs args)
+            {
+                tsk.TrySetResult(ClientValidationStatus.None);
+            }
+
+            void OnError(object? sender, ClientErrorRaisedEventArgs args)
+            {
+                if (args.Error is NotAuthorized or MalformedRequest)
+                    tsk.TrySetResult(ClientValidationStatus.Unauthorized);
+                else if (args.Error is BindError)
+                    tsk.TrySetResult(ClientValidationStatus.BindError);
+                else
+                    tsk.TrySetResult(ClientValidationStatus.Generic);
+            }
         }
-
-        var client = builderResult.AsT0!;
-        if (serverSettingsChanged)
-            client.OnClientConnected += OnClientConnectedNoChangeServer;
-        else
-            client.OnClientConnected += OnClientConnected;
-        client.ClientErrorRaised += OnClientError;
-        
-        var connectResult = await client.ConnectAsync();
-        if (!connectResult.IsT0)
+        finally
         {
-            client.OnClientConnected -= OnClientConnectedNoChangeServer;
-            client.OnClientConnected -= OnClientConnected;
-            client.ClientErrorRaised -= OnClientError;
-            await ((XmppClient)client).DisposeAsync();
-            SetValidationResult(false);
+            IsValidating = false;
         }
     }
 }
